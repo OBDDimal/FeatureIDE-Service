@@ -50,7 +50,8 @@ object Converter {
             uploadedFileDataSource.deleteRequest(requestNumber)
         }
 
-        private suspend fun convert(requests: List<Request>) {
+
+    private suspend fun convert(requests: List<Request>) {
             var fileId = -1
             var uploadedFile: UploadedFile? = null
 
@@ -126,6 +127,16 @@ object Converter {
                             originalName = request.name,
                             type = request.typeOutput,
                             content = "Could not determine the format of the file.",
+                            timeCreated = time,
+                        )
+                    } catch (e: Exception){
+                        resultFileDataSource.add(
+                            requestNumber = request.requestNumber,
+                            success = false,
+                            name = "",
+                            originalName = request.name,
+                            type = request.typeOutput,
+                            content = "An unknown error occurred, could not convert file.",
                             timeCreated = time,
                         )
                     }

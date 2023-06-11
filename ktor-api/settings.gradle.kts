@@ -1,1 +1,1 @@
-rootProject.name = "de.featureide.service"
+rootProject.name = "featureide-dockerservice"

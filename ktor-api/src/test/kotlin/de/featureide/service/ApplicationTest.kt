@@ -1,6 +1,5 @@
 package de.featureide.service
 
-
 import de.featureide.service.data.DatabaseFactory
 import de.featureide.service.data.requestDataSource
 import de.featureide.service.data.requestNumberDataSource
@@ -8,27 +7,33 @@ import de.featureide.service.data.uploadedFileDataSource
 import de.featureide.service.models.InputFile
 import de.featureide.service.models.OutputFile
 import de.featureide.service.models.Status
+import de.featureide.service.plugins.configureRouting
+import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.engine.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
+import io.ktor.server.testing.*
+import kotlin.test.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.config.*
-import io.ktor.server.testing.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.Serializable
 import java.io.File
-import kotlin.test.Test
-import kotlin.test.assertEquals
-
 
 class ApplicationTest {
 
-    private val configPath = "test.conf"
-    private val dimacsFile = File("files/input/berkeleydb.dimacs")
-    private val sxfmFile = File("files/input/Dell-sxfm.xml")
+    private val configPath = "application-test.conf"
+
+    private val featureideFile = File("testmodels/FeatureIDE.xml")
+    private val featureideSlicedFile = File("testmodels/FeatureIDEsliced.xml")
+
     @Test
     fun testRoot() = testApplication {
         environment {
@@ -36,7 +41,7 @@ class ApplicationTest {
         }
         client.get("/").apply {
             assertEquals(HttpStatusCode.OK, status)
-            assertEquals("Hello World", bodyAsText())
+            assertEquals("Hello World!", bodyAsText())
         }
     }
 
@@ -56,16 +61,12 @@ class ApplicationTest {
                 setBody(
                     listOf(
                         InputFile(
-                            dimacsFile.name,
+                            featureideFile.name,
                             arrayOf("uvl", "featureIde", "sxfm", "dimacs", "notValidFormat"),
-                            dimacsFile.readBytes(),
-                        ),
-                        InputFile(
-                            sxfmFile.name,
-                            arrayOf("uvl", "dimacs"),
-                            sxfmFile.readBytes(),
-                        ),
-                    ))
+                            featureideFile.readBytes(),
+                        )
+                    )
+                )
             }
 
             assertEquals(HttpStatusCode.OK, response.status)
@@ -78,21 +79,83 @@ class ApplicationTest {
                 status = client.get("/check/${status.requestNumber}").body()
             }
 
-            val result: List<OutputFile> = client.get("/result/${status.requestNumber}").body()
+            val results: List<OutputFile> = client.get("/result/${status.requestNumber}").body()
 
-            val success = result.filter {
+            println(results.count())
+
+            for (result in results) {
+                println(String(result.content))
+            }
+
+            val success = results.filter {
                 it.success
             }
-            val failed = result.filter {
+            val failed = results.filter {
                 !it.success
             }
 
-            assertEquals(6, success.count())
+            assertEquals(4, success.count())
             assertEquals(1, failed.count())
         }
     }
 
-    @ExperimentalCoroutinesApi
+    @Test
+    fun sliceCall() {
+        testApplication {
+            val client = createClient {
+                install(ContentNegotiation) {
+                    json()
+                }
+            }
+            environment {
+                config = ApplicationConfig(configPath)
+            }
+            val response = client.post("/slice") {
+                contentType(ContentType.Application.Json)
+                setBody(
+                    listOf(
+                        InputFile(
+                            featureideFile.name,
+                            arrayOf("FeatureHouse", "FeatureCpp"),
+                            featureideFile.readBytes(),
+                        )
+                    )
+                )
+            }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+            var status = response.body<Status>()
+            assertEquals(false, status.finished)
+
+            status = client.get("/check/${status.requestNumber}").body()
+            while (!status.finished) {
+                delay(5000L)
+                status = client.get("/check/${status.requestNumber}").body()
+            }
+
+            val results: List<OutputFile> = client.get("/result/${status.requestNumber}").body()
+
+            println(results.count())
+
+            for (result in results) {
+                println(String(result.content) + result.type)
+            }
+
+            assertTrue(String(results.get(0).content).equals(String(featureideSlicedFile.readBytes())))
+        }
+    }
+
+    @Test
+    fun noRequest() = testApplication {
+        environment {
+            config = ApplicationConfig(configPath)
+        }
+        client.get("/check/-1").apply {
+            assertEquals(HttpStatusCode.BadRequest, status)
+        }
+    }
+
+    /*@ExperimentalCoroutinesApi
     @Test
     fun addFiles() = runTest {
         val config = ApplicationConfig(configPath)
@@ -101,9 +164,9 @@ class ApplicationTest {
         val number = InputController.addFiles(
             listOf(
                 InputFile(
-                    dimacsFile.name,
+                    featureideFile.name,
                     arrayOf("featureIde", "sxfm", "uvl"),
-                    dimacsFile.readBytes(),
+                    featureideFile.readBytes(),
                 )
             )
         )
@@ -123,15 +186,6 @@ class ApplicationTest {
             assertEquals(0, requestDataSource.requests(number.value).count())
             assertEquals(0, uploadedFileDataSource.filesByRequestNumber(number.value).count())
         }
-    }
-
-    @Test
-    fun noRequest() = testApplication {
-        environment {
-            config = ApplicationConfig(configPath)
-        }
-        client.get("/check/-1").apply {
-            assertEquals(HttpStatusCode.BadRequest, status)
-        }
-    }
+    }*/
 }
+

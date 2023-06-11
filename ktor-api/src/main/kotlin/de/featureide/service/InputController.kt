@@ -32,4 +32,28 @@ object InputController {
         }
         return requestNumber.value
     }
+
+    @Throws(
+        CouldNotCreateFileException::class,
+        CouldNotCreateRequestException::class
+    )
+    suspend fun addFilesForSlice(files: List<InputFile>): Int {
+        val time = System.currentTimeMillis()
+        val requestNumber = requestNumberDataSource.add() ?: throw CouldNotCreateRequestException(-1)
+        for (file in files) {
+
+            val uploadedFile = uploadedFileDataSource.addFile(requestNumber.value, file.fileContent.decodeToString()) ?: throw CouldNotCreateFileException(requestNumber.value)
+
+
+            requestDataSource.addRequest(
+                requestNumber = requestNumber.value,
+                name = file.name,
+                typeOutput = file.typeOutput.joinToString(),
+                file = uploadedFile.id,
+                uploadTime = time,
+            ) ?: throw CouldNotCreateRequestException(requestNumber.value)
+
+        }
+        return requestNumber.value
+    }
 }

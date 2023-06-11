@@ -1,12 +1,29 @@
-# https://www.jetbrains.com/help/idea/run-and-debug-a-spring-boot-application-using-docker-compose.html
+version: "3.3"
+
 services:
-  db-test:
+  testweb:
+    build:
+      context: .
+      dockerfile: ./Dockerfile-test
+    environment:
+      PORT: 8080
+      JDBC_URL: "jdbc:postgresql://testdb:5432"
+      DATABASE: featureide_test
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    ports:
+      - "8080:8080"
+    depends_on:
+      - testdb
+
+  testdb:
     image: postgres
     volumes:
-      - ./tmp/db-test:/var/lib/postgresql/data
+      - ./tmp/testdb:/var/lib/postgresql/testdata
     environment:
-      POSTGRES_DB: ktorjournal
-      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: featureide_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     healthcheck:
