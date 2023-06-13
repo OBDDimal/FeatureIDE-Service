@@ -129,6 +129,7 @@ fun Application.configureRouting(config: ApplicationConfig) {
 
         post("/slice") {
             val file = call.receive<SliceInput>()
+            println("could cast file")
             try {
                 val id = InputController.addFileForSlice(file)
                 if(id == null){

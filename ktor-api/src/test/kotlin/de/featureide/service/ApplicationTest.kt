@@ -114,17 +114,15 @@ class ApplicationTest {
             val response = client.post("/slice") {
                 contentType(ContentType.Application.Json)
                 setBody(
-                    listOf(
-                        InputFile(
-                            featureideFile.name,
-                            arrayOf("FeatureHouse", "FeatureCpp"),
-                            featureideFile.readBytes(),
-                        )
+                    InputFile(
+                        featureideFile.name,
+                        arrayOf("FeatureHouse", "FeatureCpp"),
+                        featureideFile.readBytes(),
                     )
                 )
             }
 
-            assertEquals(HttpStatusCode.OK, response.status)
+            assertEquals(HttpStatusCode.Created, response.status)
             var newLocation = response.headers[HttpHeaders.Location]
 
             assertTrue(newLocation != null)
@@ -138,7 +136,10 @@ class ApplicationTest {
 
             val resultBody: SliceOutput = client.get(newLocation).body()
 
-            assertEquals(String(resultBody.content).replace("\\s".toRegex(), ""), String(featureideSlicedFile.readBytes()).replace("\\s".toRegex(), ""))
+            assertEquals(
+                String(resultBody.content).replace("\\s".toRegex(), ""),
+                String(featureideSlicedFile.readBytes()).replace("\\s".toRegex(), "")
+            )
         }
     }
 
