@@ -3,10 +3,7 @@ package de.featureide.service.data
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import de.featureide.service.models.RequestNumbers
-import de.featureide.service.models.Requests
-import de.featureide.service.models.ResultFiles
-import de.featureide.service.models.UploadedFiles
+import de.featureide.service.models.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.Database
@@ -28,6 +25,7 @@ object DatabaseFactory {
             SchemaUtils.create(RequestNumbers)
             SchemaUtils.create(ResultFiles)
             SchemaUtils.create(UploadedFiles)
+            SchemaUtils.create(SlicedFiles)
         }
     }
 

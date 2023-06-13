@@ -6,6 +6,7 @@ import de.featureide.service.data.requestNumberDataSource
 import de.featureide.service.data.uploadedFileDataSource
 import de.featureide.service.models.InputFile
 import de.featureide.service.models.OutputFile
+import de.featureide.service.models.SliceOutput
 import de.featureide.service.models.Status
 import de.featureide.service.plugins.configureRouting
 import io.ktor.client.*
@@ -124,24 +125,20 @@ class ApplicationTest {
             }
 
             assertEquals(HttpStatusCode.OK, response.status)
-            var status = response.body<Status>()
-            assertEquals(false, status.finished)
+            var newLocation = response.headers[HttpHeaders.Location]
 
-            status = client.get("/check/${status.requestNumber}").body()
-            while (!status.finished) {
+            assertTrue(newLocation != null)
+
+            var result = client.get(newLocation)
+
+            while (result.status != HttpStatusCode.OK) {
                 delay(5000L)
-                status = client.get("/check/${status.requestNumber}").body()
+                result = client.get(newLocation)
             }
 
-            val results: List<OutputFile> = client.get("/result/${status.requestNumber}").body()
+            val resultBody: SliceOutput = client.get(newLocation).body()
 
-            println(results.count())
-
-            for (result in results) {
-                println(String(result.content) + result.type)
-            }
-
-            assertEquals(String(results.get(0).content).replace("\\s".toRegex(), ""), String(featureideSlicedFile.readBytes()).replace("\\s".toRegex(), ""))
+            assertEquals(String(resultBody.content).replace("\\s".toRegex(), ""), String(featureideSlicedFile.readBytes()).replace("\\s".toRegex(), ""))
         }
     }
 

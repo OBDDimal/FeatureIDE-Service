@@ -6,11 +6,10 @@ import de.featureide.service.Slicer
 import de.featureide.service.data.requestDataSource
 import de.featureide.service.data.requestNumberDataSource
 import de.featureide.service.data.resultFileDataSource
+import de.featureide.service.data.slicedFileDataSource
 import de.featureide.service.exceptions.CouldNotCreateFileException
 import de.featureide.service.exceptions.CouldNotCreateRequestException
-import de.featureide.service.models.InputFile
-import de.featureide.service.models.OutputFile
-import de.featureide.service.models.Status
+import de.featureide.service.models.*
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.config.*
@@ -129,20 +128,18 @@ fun Application.configureRouting(config: ApplicationConfig) {
         }
 
         post("/slice") {
-            val files = call.receive<List<InputFile>>()
+            val file = call.receive<SliceInput>()
             try {
-                val requestNumber = InputController.addFilesForSlice(files)
-                launch(Dispatchers.IO) {
-                    Slicer.sliceFiles(requestNumber)
+                val id = InputController.addFileForSlice(file)
+                if(id == null){
+                    throw Exception()
                 }
-                call.respond(
-                    Status(
-                        requestNumber = requestNumber,
-                        finished = false,
-                        amountToProcess = requestDataSource.requestCount(requestNumber),
-                        resourceLocation = "check/$requestNumber",
-                    )
-                )
+
+                launch(Dispatchers.IO) {
+                    Slicer.slice(file, id)
+                }
+                call.response.created(id)
+                call.respondText("Request accepted!")
             } catch (e: CouldNotCreateRequestException) {
                 if (e.requestNumber < 0) {
                     call.respond(HttpStatusCode.InternalServerError, "Could not queue the request.")
@@ -159,7 +156,31 @@ fun Application.configureRouting(config: ApplicationConfig) {
                 )
             }
         }
+
+        get("slice/{id?}") {
+            val id = call.parameters["id"]?.toInt() ?: return@get call.respondText(
+                "Bad Request",
+                status = HttpStatusCode.BadRequest
+            )
+            val results = slicedFileDataSource.isReady(id)
+            if(!results) {
+                call.respond(HttpStatusCode.Accepted, "File is not ready yet!")
+            }
+            val outputFile = slicedFileDataSource.getFile(id)
+            launch(Dispatchers.IO) {
+                slicedFileDataSource.delete(id)
+            }
+
+            val sliceOutput = SliceOutput(outputFile!!)
+
+            call.respond(sliceOutput)
+        }
     }
+}
+
+private fun ApplicationResponse.created(id: Int) {
+    call.response.status(HttpStatusCode.Created)
+    call.response.header("Location", "${call.request.uri}/$id")
 }
 
 class AuthenticationException : RuntimeException()
