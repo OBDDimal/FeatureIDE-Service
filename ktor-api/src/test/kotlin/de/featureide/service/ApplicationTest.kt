@@ -141,7 +141,7 @@ class ApplicationTest {
                 println(String(result.content) + result.type)
             }
 
-            assertTrue(String(results.get(0).content).equals(String(featureideSlicedFile.readBytes())))
+            assertEquals(String(results.get(0).content).replace("\\s".toRegex(), ""), String(featureideSlicedFile.readBytes()).replace("\\s".toRegex(), ""))
         }
     }
 

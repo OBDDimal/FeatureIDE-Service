@@ -18,11 +18,8 @@ object DatabaseFactory {
     fun init(config: ApplicationConfig) {
         val driverClassName = config.property("ktor.database.driverClassName").getString()
         val jdbcURL = config.property("ktor.database.jdbcURL").getString()
-        val username = config.property("ktor.database.user").getString()
-        val password = config.property("ktor.database.password").getString()
-        val defaultDatabase = config.property("ktor.database.database").getString()
         val connectionPool = createHikariDataSource(
-            url = "$jdbcURL/$defaultDatabase?user=$username&password=$password",
+            url = "$jdbcURL",
             driver = driverClassName
         )
         val database = Database.connect(connectionPool)
