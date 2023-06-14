@@ -129,7 +129,6 @@ fun Application.configureRouting(config: ApplicationConfig) {
 
         post("/slice") {
             val file = call.receive<SliceInput>()
-            println("could cast file")
             try {
                 val id = InputController.addFileForSlice(file)
                 if(id == null){
@@ -164,17 +163,18 @@ fun Application.configureRouting(config: ApplicationConfig) {
                 status = HttpStatusCode.BadRequest
             )
             val results = slicedFileDataSource.isReady(id)
-            if(!results) {
+            if(results) {
                 call.respond(HttpStatusCode.Accepted, "File is not ready yet!")
-            }
-            val outputFile = slicedFileDataSource.getFile(id)
-            launch(Dispatchers.IO) {
-                slicedFileDataSource.delete(id)
-            }
+            } else {
+                val outputFile = slicedFileDataSource.getFile(id)
+                val sliceOutput = SliceOutput(outputFile!!)
+                call.response.status(HttpStatusCode.OK)
+                call.respond(sliceOutput)
 
-            val sliceOutput = SliceOutput(outputFile!!)
-
-            call.respond(sliceOutput)
+                launch(Dispatchers.IO) {
+                    slicedFileDataSource.delete(id)
+                }
+            }
         }
     }
 }

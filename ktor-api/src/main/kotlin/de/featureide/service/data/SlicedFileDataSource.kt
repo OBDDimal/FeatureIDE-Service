@@ -25,7 +25,10 @@ class SlicedFileDataSource : SlicedFileDAO {
 
     override suspend fun addFile(originalName: String): SlicedFile? = dbQuery {
         val insert = SlicedFiles.insert {
+            it[SlicedFiles.name] = ""
             it[SlicedFiles.originalName] = originalName
+            it[SlicedFiles.content] = ""
+            it[SlicedFiles.featuresSliced] = ""
         }
 
         insert.resultedValues?.singleOrNull()?.let(::resultRowToFile)

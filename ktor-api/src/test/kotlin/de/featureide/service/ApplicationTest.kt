@@ -4,10 +4,7 @@ import de.featureide.service.data.DatabaseFactory
 import de.featureide.service.data.requestDataSource
 import de.featureide.service.data.requestNumberDataSource
 import de.featureide.service.data.uploadedFileDataSource
-import de.featureide.service.models.InputFile
-import de.featureide.service.models.OutputFile
-import de.featureide.service.models.SliceOutput
-import de.featureide.service.models.Status
+import de.featureide.service.models.*
 import de.featureide.service.plugins.configureRouting
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -114,7 +111,7 @@ class ApplicationTest {
             val response = client.post("/slice") {
                 contentType(ContentType.Application.Json)
                 setBody(
-                    InputFile(
+                    SliceInput(
                         featureideFile.name,
                         arrayOf("FeatureHouse", "FeatureCpp"),
                         featureideFile.readBytes(),
@@ -132,6 +129,7 @@ class ApplicationTest {
             while (result.status != HttpStatusCode.OK) {
                 delay(5000L)
                 result = client.get(newLocation)
+                result.body<String>()
             }
 
             val resultBody: SliceOutput = client.get(newLocation).body()
