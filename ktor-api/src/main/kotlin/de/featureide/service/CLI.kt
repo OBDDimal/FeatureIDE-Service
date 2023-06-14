@@ -131,7 +131,33 @@ object CLI {
                 }
             }
         } else if (file.exists()){
+            val model = FeatureModelManager.load(Paths.get(file.path))
+            val formats: MutableList<IPersistentFormat<IFeatureModel>> = mutableListOf()
 
+            if (dimacs || all) {
+                formats.add(DIMACSFormat())
+            }
+
+            if (uvl || all) {
+                formats.add(UVLFeatureModelFormat())
+            }
+
+            if (featureIde || all) {
+                formats.add(XmlFeatureModelFormat())
+            }
+
+            if (sxfm || all) {
+                formats.add(SXFMFormat())
+            }
+
+            for (format in formats) {
+                println("Converting ${file.name} to ${format.suffix}")
+                saveFeatureModel(
+                    model,
+                    "${output}/${file.nameWithoutExtension}_${format.name}.${format.suffix}",
+                    format,
+                )
+            }
         }
     }
 
