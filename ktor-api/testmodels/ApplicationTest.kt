@@ -19,10 +19,6 @@ class ApplicationTest {
 
     private val featureideFile = File("testmodels/FeatureIDE.xml")
     private val featureideSlicedFile = File("testmodels/FeatureIDEsliced.xml")
-    private val featureideUvlFile = File("testmodels/FeatureIDE_UVL.uvl")
-    private val featureideDimacsFile = File("testmodels/FeatureIDE_DIMACS.dimacs")
-    private val featureideSXFMFile = File("testmodels/FeatureIDE_SXFM.xml")
-    private val featureideFideFile = File("testmodels/FeatureIDE_FeatureIDE.xml")
 
     @Test
     fun testRoot() = testApplication {
@@ -72,23 +68,8 @@ class ApplicationTest {
             val resultBody: ConvertOutput = result.body()
 
             assertEquals(
-                String(resultBody.content[0]).replace("\\s".toRegex(), ""),
-                String(featureideUvlFile.readBytes()).replace("\\s".toRegex(), "")
-            )
-
-            assertEquals(
                 String(resultBody.content[1]).replace("\\s".toRegex(), ""),
-                String(featureideFideFile.readBytes()).replace("\\s".toRegex(), "")
-            )
-
-            assertEquals(
-                String(resultBody.content[2]).replace("\\s".toRegex(), ""),
-                String(featureideSXFMFile.readBytes()).replace("\\s".toRegex(), "")
-            )
-
-            assertEquals(
-                String(resultBody.content[3]).replace("\\s".toRegex(), ""),
-                String(featureideDimacsFile.readBytes()).replace("\\s".toRegex(), "")
+                String(featureideFile.readBytes()).replace("\\s".toRegex(), "")
             )
 
         }

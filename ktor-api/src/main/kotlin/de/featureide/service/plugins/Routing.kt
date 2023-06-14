@@ -3,10 +3,7 @@ package de.featureide.service.plugins
 import de.featureide.service.Converter
 import de.featureide.service.InputController
 import de.featureide.service.Slicer
-import de.featureide.service.data.requestDataSource
-import de.featureide.service.data.requestNumberDataSource
-import de.featureide.service.data.resultFileDataSource
-import de.featureide.service.data.slicedFileDataSource
+import de.featureide.service.data.*
 import de.featureide.service.exceptions.CouldNotCreateFileException
 import de.featureide.service.exceptions.CouldNotCreateRequestException
 import de.featureide.service.models.*
@@ -35,81 +32,18 @@ fun Application.configureRouting(config: ApplicationConfig) {
             call.respondText("Hello World!")
         }
 
-        get("/check/{id?}") {
-            val id = call.parameters["id"]?.toInt() ?: return@get call.respondText(
-                "Bad Request",
-                status = HttpStatusCode.BadRequest
-            )
-            val requests = requestDataSource.requestCount(id)
-            val results = resultFileDataSource.fileCount(id)
-
-            if (requests == 0 && results == 0) {
-                call.respond(HttpStatusCode.BadRequest, "No such request exists.")
-            }
-
-            if (requests > 0) {
-                call.respond(
-                    Status(
-                        requestNumber = id,
-                        finished = false,
-                        amountToProcess = requests,
-                        resourceLocation = "",
-                    )
-                )
-            }
-
-            if (results > 0 && requests == 0) {
-                call.respond(
-                    Status(
-                        requestNumber = id,
-                        finished = true,
-                        amountToProcess = requests,
-                        resourceLocation = "result/$id",
-                    )
-                )
-            }
-        }
-
-        get("/result/{id?}") {
-            val id = call.parameters["id"]?.toInt() ?: return@get call.respondText(
-                "Bad Request",
-                status = HttpStatusCode.BadRequest
-            )
-            val results = resultFileDataSource.filesByRequestNumber(id)
-            val outputFiles = mutableListOf<OutputFile>()
-            for (result in results) {
-                outputFiles.add(
-                    OutputFile(
-                        name = result.name,
-                        originalName = result.originalName,
-                        type = result.type,
-                        success = result.success,
-                        content = result.content.toByteArray(),
-                    )
-                )
-            }
-            launch(Dispatchers.IO) {
-                resultFileDataSource.deleteByRequestNumber(id)
-                requestNumberDataSource.delete(id)
-            }
-            call.respond(outputFiles)
-        }
-
         post("/convert") {
-            val files = call.receive<List<InputFile>>()
+            val file = call.receive<ConvertInput>()
             try {
-                val requestNumber = InputController.addFiles(files)
-                launch(Dispatchers.IO) {
-                    Converter.convertFiles(requestNumber)
+                val id = InputController.addFileForConvert(file)
+                if(id == null){
+                    throw Exception()
                 }
-                call.respond(
-                    Status(
-                        requestNumber = requestNumber,
-                        finished = false,
-                        amountToProcess = requestDataSource.requestCount(requestNumber),
-                        resourceLocation = "check/$requestNumber",
-                    )
-                )
+                launch(Dispatchers.IO) {
+                    Converter.convert(file, id)
+                }
+                call.response.created(id)
+                call.respondText("Request accepted!")
             } catch (e: CouldNotCreateRequestException) {
                 if (e.requestNumber < 0) {
                     call.respond(HttpStatusCode.InternalServerError, "Could not queue the request.")
@@ -124,6 +58,34 @@ fun Application.configureRouting(config: ApplicationConfig) {
                     HttpStatusCode.InternalServerError,
                     "A request from request ${e.requestNumber} could not be added to the database."
                 )
+            } catch (e: Exception){
+                call.respond(
+                    HttpStatusCode.BadRequest
+                )
+            }
+        }
+
+        get("convert/{id?}") {
+            val id = call.parameters["id"]?.toInt() ?: return@get call.respondText(
+                "Bad Request",
+                status = HttpStatusCode.BadRequest
+            )
+            if(convertedFileDataSource.getFile(id) == null)
+            {
+                call.respond(HttpStatusCode.BadRequest, "File does not exist!")
+            }
+
+            val results = convertedFileDataSource.isReady(id)
+            if(results) {
+                call.respond(HttpStatusCode.Accepted, "File is not ready yet!")
+            } else {
+                val outputFile = convertedFileDataSource.getFile(id)
+                val convertOutput = ConvertOutput(outputFile!!)
+                launch(Dispatchers.IO) {
+                    convertedFileDataSource.delete(id)
+                }
+                call.response.status(HttpStatusCode.OK)
+                call.respond(convertOutput)
             }
         }
 
@@ -134,7 +96,6 @@ fun Application.configureRouting(config: ApplicationConfig) {
                 if(id == null){
                     throw Exception()
                 }
-
                 launch(Dispatchers.IO) {
                     Slicer.slice(file, id)
                 }
@@ -154,6 +115,10 @@ fun Application.configureRouting(config: ApplicationConfig) {
                     HttpStatusCode.InternalServerError,
                     "A request from request ${e.requestNumber} could not be added to the database."
                 )
+            } catch (e: Exception){
+                call.respond(
+                    HttpStatusCode.BadRequest
+                )
             }
         }
 
@@ -162,18 +127,22 @@ fun Application.configureRouting(config: ApplicationConfig) {
                 "Bad Request",
                 status = HttpStatusCode.BadRequest
             )
+            if(slicedFileDataSource.getFile(id) == null)
+            {
+                call.respond(HttpStatusCode.BadRequest, "File does not exist!")
+            }
+
             val results = slicedFileDataSource.isReady(id)
             if(results) {
                 call.respond(HttpStatusCode.Accepted, "File is not ready yet!")
             } else {
                 val outputFile = slicedFileDataSource.getFile(id)
                 val sliceOutput = SliceOutput(outputFile!!)
-                call.response.status(HttpStatusCode.OK)
-                call.respond(sliceOutput)
-
                 launch(Dispatchers.IO) {
                     slicedFileDataSource.delete(id)
                 }
+                call.response.status(HttpStatusCode.OK)
+                call.respond(sliceOutput)
             }
         }
     }

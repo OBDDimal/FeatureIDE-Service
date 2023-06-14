@@ -26,6 +26,7 @@ object DatabaseFactory {
             SchemaUtils.create(ResultFiles)
             SchemaUtils.create(UploadedFiles)
             SchemaUtils.create(SlicedFiles)
+            SchemaUtils.create(ConvertedFiles)
         }
     }
 

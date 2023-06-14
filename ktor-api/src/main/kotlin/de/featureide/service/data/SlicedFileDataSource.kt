@@ -2,8 +2,6 @@ package de.featureide.service.data
 
 import de.featureide.service.data.DatabaseFactory.dbQuery
 import de.featureide.service.data.dao.SlicedFileDAO
-import de.featureide.service.models.Request
-import de.featureide.service.models.Requests
 import de.featureide.service.models.SlicedFile
 import de.featureide.service.models.SlicedFiles
 import org.jetbrains.exposed.sql.*
@@ -35,7 +33,7 @@ class SlicedFileDataSource : SlicedFileDAO {
     }
 
     override suspend fun isReady(id: Int): Boolean = dbQuery {
-        SlicedFiles.select(SlicedFiles.id eq id).map(::resultRowToFile).singleOrNull()?.content.isNullOrEmpty()
+        SlicedFiles.select(SlicedFiles.id eq id).map(::resultRowToFile).singleOrNull()?.content.isNullOrBlank()
     }
 
 

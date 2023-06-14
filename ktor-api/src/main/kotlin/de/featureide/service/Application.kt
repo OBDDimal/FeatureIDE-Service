@@ -15,10 +15,6 @@ fun Application.module() {
     DatabaseFactory.init(environment.config)
     configureSerialization()
     configureRouting(environment.config)
-    launch {
-        //Converter.convertRemainingFiles()
-        //Slicer.sliceRemainingFiles()
-    }
 }
 
 
