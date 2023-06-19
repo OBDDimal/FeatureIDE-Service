@@ -21,10 +21,6 @@ object DatabaseFactory {
         )
         val database = Database.connect(connectionPool)
         transaction(database) {
-            SchemaUtils.create(Requests)
-            SchemaUtils.create(RequestNumbers)
-            SchemaUtils.create(ResultFiles)
-            SchemaUtils.create(UploadedFiles)
             SchemaUtils.create(SlicedFiles)
             SchemaUtils.create(ConvertedFiles)
         }

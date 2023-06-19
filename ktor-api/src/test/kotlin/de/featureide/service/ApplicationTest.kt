@@ -142,7 +142,10 @@ class ApplicationTest {
         environment {
             config = ApplicationConfig(configPath)
         }
-        client.get("/check/-1").apply {
+        client.get("/convert/-1").apply {
+            assertEquals(HttpStatusCode.BadRequest, status)
+        }
+        client.get("/slice/-1").apply {
             assertEquals(HttpStatusCode.BadRequest, status)
         }
     }

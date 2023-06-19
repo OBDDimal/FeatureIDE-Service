@@ -70,13 +70,15 @@ fun Application.configureRouting(config: ApplicationConfig) {
                 "Bad Request",
                 status = HttpStatusCode.BadRequest
             )
-            if(convertedFileDataSource.getFile(id) == null)
+            val file = convertedFileDataSource.getFile(id)
+            val results = convertedFileDataSource.isReady(id)
+            if(file == null)
             {
                 call.respond(HttpStatusCode.BadRequest, "File does not exist!")
             }
 
-            val results = convertedFileDataSource.isReady(id)
-            if(results) {
+
+            else if(results) {
                 call.respond(HttpStatusCode.Accepted, "File is not ready yet!")
             } else {
                 val outputFile = convertedFileDataSource.getFile(id)
@@ -127,13 +129,15 @@ fun Application.configureRouting(config: ApplicationConfig) {
                 "Bad Request",
                 status = HttpStatusCode.BadRequest
             )
-            if(slicedFileDataSource.getFile(id) == null)
-            {
+            val file = slicedFileDataSource.getFile(id)
+            val results = slicedFileDataSource.isReady(id)
+
+            if(file == null) {
                 call.respond(HttpStatusCode.BadRequest, "File does not exist!")
             }
 
-            val results = slicedFileDataSource.isReady(id)
-            if(results) {
+
+            else if(results) {
                 call.respond(HttpStatusCode.Accepted, "File is not ready yet!")
             } else {
                 val outputFile = slicedFileDataSource.getFile(id)
