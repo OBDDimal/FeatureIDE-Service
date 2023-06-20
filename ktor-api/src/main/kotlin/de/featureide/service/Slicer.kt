@@ -1,6 +1,9 @@
 package de.featureide.service
 
+import de.featureide.service.data.convertedFileDataSource
 import de.featureide.service.data.slicedFileDataSource
+import de.featureide.service.exceptions.CouldNotCreateFileException
+import de.featureide.service.exceptions.CouldNotCreateRequestException
 import de.featureide.service.models.SliceInput
 import de.ovgu.featureide.fm.core.base.IFeature
 import de.ovgu.featureide.fm.core.base.IFeatureModel
@@ -93,6 +96,16 @@ object Slicer {
         } catch (e: Exception) {
             throw e
         }
+    }
+
+    @Throws(
+        CouldNotCreateFileException::class,
+        CouldNotCreateRequestException::class
+    )
+    suspend fun addFileForSlice(): Int? {
+
+        val id = slicedFileDataSource.addFile()?.id
+        return id
     }
 }
 

@@ -2,6 +2,8 @@ package de.featureide.service
 
 
 import de.featureide.service.data.*
+import de.featureide.service.exceptions.CouldNotCreateFileException
+import de.featureide.service.exceptions.CouldNotCreateRequestException
 import de.featureide.service.exceptions.FileFormatNotFoundException
 import de.featureide.service.exceptions.FormatNotFoundException
 import de.featureide.service.models.ConvertInput
@@ -150,6 +152,16 @@ object Converter {
         const val UVL = 1
         const val FEATURE_IDE = 2
         const val SXFM = 3
+    }
+
+    @Throws(
+        CouldNotCreateFileException::class,
+        CouldNotCreateRequestException::class
+    )
+    suspend fun addFileForConvert(): Int? {
+
+        val id = convertedFileDataSource.addFile()?.id
+        return id
     }
 }
 

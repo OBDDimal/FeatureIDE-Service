@@ -5,7 +5,6 @@ import org.jetbrains.exposed.sql.Table
 data class ConvertedFile(
     val id: Int,
     val name: Array<String>,
-    val originalName: String,
     val typeOutput: Array<String>,
     val content: Array<String>,
 )
@@ -13,7 +12,6 @@ data class ConvertedFile(
 object ConvertedFiles : Table() {
     val id = integer("id").autoIncrement()
     val name = varchar("name", 4096)
-    val originalName = varchar("originalName", 1024)
     val typeOutput = text("typeOutput")
     val content = text("content")
 

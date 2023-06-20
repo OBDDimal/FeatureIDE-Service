@@ -6,9 +6,7 @@ interface ConvertFileDAO {
 
     suspend fun getFile(id: Int): ConvertedFile?
 
-    suspend fun addFile(
-        originalName: String,
-    ): ConvertedFile?
+    suspend fun addFile(): ConvertedFile?
 
     suspend fun isReady(id: Int): Boolean
 

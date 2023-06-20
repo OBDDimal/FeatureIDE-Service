@@ -12,7 +12,6 @@ class SlicedFileDataSource : SlicedFileDAO {
     private fun resultRowToFile(row: ResultRow) = SlicedFile(
         id = row[SlicedFiles.id],
         name = row[SlicedFiles.name],
-        originalName = row[SlicedFiles.originalName],
         content = row[SlicedFiles.content],
         featuresSliced = row[SlicedFiles.featuresSliced]
     )
@@ -21,10 +20,9 @@ class SlicedFileDataSource : SlicedFileDAO {
         SlicedFiles.select(SlicedFiles.id eq id).map(::resultRowToFile).singleOrNull()
     }
 
-    override suspend fun addFile(originalName: String): SlicedFile? = dbQuery {
+    override suspend fun addFile(): SlicedFile? = dbQuery {
         val insert = SlicedFiles.insert {
             it[SlicedFiles.name] = ""
-            it[SlicedFiles.originalName] = originalName
             it[SlicedFiles.content] = ""
             it[SlicedFiles.featuresSliced] = ""
         }

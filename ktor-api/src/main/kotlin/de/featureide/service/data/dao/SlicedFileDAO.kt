@@ -6,9 +6,7 @@ interface SlicedFileDAO {
 
     suspend fun getFile(id: Int): SlicedFile?
 
-    suspend fun addFile(
-        originalName: String,
-    ): SlicedFile?
+    suspend fun addFile(): SlicedFile?
 
     suspend fun isReady(id: Int): Boolean
 

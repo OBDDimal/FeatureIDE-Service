@@ -12,7 +12,6 @@ class ConvertFileDataSource : ConvertFileDAO {
     private fun resultRowToFile(row: ResultRow) = ConvertedFile(
         id = row[ConvertedFiles.id],
         name = row[ConvertedFiles.name].split(":::").toTypedArray(),
-        originalName = row[ConvertedFiles.originalName],
         content = row[ConvertedFiles.content].split(":::").toTypedArray(),
         typeOutput = row[ConvertedFiles.typeOutput].split(":::").toTypedArray()
     )
@@ -21,10 +20,9 @@ class ConvertFileDataSource : ConvertFileDAO {
         ConvertedFiles.select(ConvertedFiles.id eq id).map(::resultRowToFile).singleOrNull()
     }
 
-    override suspend fun addFile(originalName: String): ConvertedFile? = dbQuery {
+    override suspend fun addFile(): ConvertedFile? = dbQuery {
         val insert = ConvertedFiles.insert {
             it[ConvertedFiles.name] = ""
-            it[ConvertedFiles.originalName] = originalName
             it[ConvertedFiles.content] = ""
             it[ConvertedFiles.typeOutput] = ""
         }

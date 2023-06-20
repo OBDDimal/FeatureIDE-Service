@@ -23,6 +23,7 @@ object DatabaseFactory {
         transaction(database) {
             SchemaUtils.create(SlicedFiles)
             SchemaUtils.create(ConvertedFiles)
+            SchemaUtils.create(ConfigurationFiles)
         }
     }
 
