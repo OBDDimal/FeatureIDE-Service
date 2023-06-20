@@ -1,4 +1,4 @@
-FROM gradle:7-jdk11 AS build
+FROM gradle:7-jdk19 AS build
 COPY --chown=gradle:gradle . /home/gradle/src
 WORKDIR /home/gradle/src
 RUN mkdir lib
@@ -11,8 +11,8 @@ ADD https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b09557241b85404440
 RUN gradle shadowJar --no-daemon
 
 
-FROM openjdk:11
-EXPOSE 8080:8080
+FROM openjdk:19
+EXPOSE 10000:10000
 RUN mkdir /app
 COPY --from=build /home/gradle/src/build/libs/*.jar /app/featureideservice.jar
 ENTRYPOINT ["java","-jar","/app/featureideservice.jar"]

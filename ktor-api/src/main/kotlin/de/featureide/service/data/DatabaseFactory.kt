@@ -16,7 +16,7 @@ object DatabaseFactory {
         val driverClassName = config.property("ktor.database.driverClassName").getString()
         val jdbcURL = config.property("ktor.database.jdbcURL").getString()
         val connectionPool = createHikariDataSource(
-            url = "$jdbcURL",
+            url = jdbcURL,
             driver = driverClassName
         )
         val database = Database.connect(connectionPool)

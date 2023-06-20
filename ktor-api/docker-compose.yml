@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: ./Dockerfile
     environment:
-      PORT: 8080
+      PORT: 10000
       JDBC_URL: "jdbc:sqlite:file:test?mode=memory&cache=shared"
-    expose:
-      - 8080
+    ports:
+      - "10000:10000"

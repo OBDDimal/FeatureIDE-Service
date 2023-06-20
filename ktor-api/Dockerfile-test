@@ -1,6 +1,8 @@
-FROM gradle:7-jdk11 AS build
+FROM gradle:7-jdk19 AS build
 COPY --chown=gradle:gradle . /home/gradle/src
 WORKDIR /home/gradle/src
+ENV http_proxy "http://127.0.0.1:3001"
+ENV https_proxy "http://127.0.0.1:3001"
 RUN mkdir lib
 
 ADD https://github.com/FeatureIDE/FeatureIDE/releases/download/v3.9.2/de.ovgu.featureide.lib.fm-v3.9.2.jar lib/de.ovgu.featureide.lib.fm-v3.9.2.jar
