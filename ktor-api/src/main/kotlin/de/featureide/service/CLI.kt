@@ -103,7 +103,7 @@ object CLI {
                     contains("yasa") -> {
                         generator = TWiseConfigurationGenerator(cnf, t, limit)
                         val yasa = generator as TWiseConfigurationGenerator?
-                        yasa!!.iterations = java.lang.Integer.parseInt(algorithm!!.split("_")[1])
+                        yasa!!.iterations = Integer.parseInt(algorithm!!.split("_")[1])
                     }
                     contains("random") -> {
                         generator = RandomConfigurationGenerator(cnf, limit)
