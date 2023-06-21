@@ -2,15 +2,17 @@ package de.featureide.service.models
 
 import org.jetbrains.exposed.sql.Table
 
-data class UploadedFile(
+data class SlicedFile(
     val id: Int,
-    val requestNumber: Int,
+    val name: String,
+    val featuresSliced: String,
     val content: String,
-    )
+)
 
-object UploadedFiles : Table() {
+object SlicedFiles : Table() {
     val id = integer("id").autoIncrement()
-    val requestNumber = integer("requestNumber")
+    val name = varchar("name", 1024)
+    val featuresSliced = text("featuresSliced")
     val content = text("content")
 
     override val primaryKey = PrimaryKey(id)

@@ -3,10 +3,7 @@ package de.featureide.service.data
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import de.featureide.service.models.RequestNumbers
-import de.featureide.service.models.Requests
-import de.featureide.service.models.ResultFiles
-import de.featureide.service.models.UploadedFiles
+import de.featureide.service.models.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.Database
@@ -18,19 +15,15 @@ object DatabaseFactory {
     fun init(config: ApplicationConfig) {
         val driverClassName = config.property("ktor.database.driverClassName").getString()
         val jdbcURL = config.property("ktor.database.jdbcURL").getString()
-        val username = config.property("ktor.database.user").getString()
-        val password = config.property("ktor.database.password").getString()
-        val defaultDatabase = config.property("ktor.database.database").getString()
         val connectionPool = createHikariDataSource(
-            url = "$jdbcURL/$defaultDatabase?user=$username&password=$password",
+            url = jdbcURL,
             driver = driverClassName
         )
         val database = Database.connect(connectionPool)
         transaction(database) {
-            SchemaUtils.create(Requests)
-            SchemaUtils.create(RequestNumbers)
-            SchemaUtils.create(ResultFiles)
-            SchemaUtils.create(UploadedFiles)
+            SchemaUtils.create(SlicedFiles)
+            SchemaUtils.create(ConvertedFiles)
+            SchemaUtils.create(ConfigurationFiles)
         }
     }
 

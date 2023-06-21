@@ -1,16 +1,23 @@
 package de.featureide.service
 
+import de.ovgu.featureide.fm.core.analysis.cnf.SolutionList
+import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula
+import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.*
+import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.twise.TWiseConfigurationGenerator
 import de.ovgu.featureide.fm.core.base.IFeature
 import de.ovgu.featureide.fm.core.base.IFeatureModel
 import de.ovgu.featureide.fm.core.init.FMCoreLibrary
 import de.ovgu.featureide.fm.core.init.LibraryManager
 import de.ovgu.featureide.fm.core.io.IPersistentFormat
+import de.ovgu.featureide.fm.core.io.csv.ConfigurationListFormat
 import de.ovgu.featureide.fm.core.io.dimacs.DIMACSFormat
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
+import de.ovgu.featureide.fm.core.io.manager.FileHandler
 import de.ovgu.featureide.fm.core.io.sxfm.SXFMFormat
 import de.ovgu.featureide.fm.core.io.uvl.UVLFeatureModelFormat
 import de.ovgu.featureide.fm.core.io.xml.XmlFeatureModelFormat
 import de.ovgu.featureide.fm.core.job.SliceFeatureModel
+import de.ovgu.featureide.fm.core.job.monitor.ConsoleMonitor
 import de.ovgu.featureide.fm.core.job.monitor.NullMonitor
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
@@ -40,11 +47,16 @@ object CLI {
         val path by parser.option(ArgType.String, shortName = "p", description = "Input path for file or directory.").required()
         val slice by parser.option(ArgType.String, shortName = "s", description = "The names of the features that should be sliced separated by ','. For example: Antenna,AHEAD.")
         val check by parser.option(ArgType.String, shortName = "c", description = "Input path for the second file that should be checked with the first one.")
+        val algorithm by parser.option(ArgType.String, shortName = "alg", description = "The algorithm to generate a configuration sample as csv file")
         val all by parser.option(ArgType.Boolean, shortName = "a", description = "Parsers all files from path into all formats.").default(false)
         val dimacs by parser.option(ArgType.Boolean, shortName = "d", description = "Parses all files from path into dimacs files.").default(false)
         val uvl by parser.option(ArgType.Boolean, shortName = "u", description = "Parses all files from path into uvl files.").default(false)
         val sxfm by parser.option(ArgType.Boolean, shortName = "sf", description = "Parses all files from path into sxfm(xml) files.").default(false)
         val featureIde by parser.option(ArgType.Boolean, shortName = "fi", description = "Parses all files from path into featureIde(xml) files.").default(false)
+        val t by parser.option(ArgType.Int, shortName = "t", description = "The t wise pairing that should be covered by the configuration sample").default(0)
+        val limit by parser.option(ArgType.Int, shortName = "l", description = "The maximum amount of configurations for the configuration sample").default(Int.MAX_VALUE)
+
+
         parser.parse(args)
 
 
@@ -67,6 +79,49 @@ object CLI {
             }
             model = slice(model, featuresToSlice)
             saveFeatureModel(model, "${output}/${file.nameWithoutExtension}.${XmlFeatureModelFormat().suffix}", XmlFeatureModelFormat())
+            exitProcess(0)
+        }
+
+        if (!algorithm.isNullOrEmpty()){
+            if(file.isDirectory() || !file.exists()) exitProcess(0)
+            val model = FeatureModelManager.load(Paths.get(file.path))
+
+            val cnf = FeatureModelFormula(model).cnf
+
+            var generator: IConfigurationGenerator? = null
+            with(algorithm!!) {
+                when {
+                    contains("icpl") -> {
+                        generator = SPLCAToolConfigurationGenerator(cnf, "ICPL", t, limit)
+                    }
+                    contains("chvatal")-> {
+                        generator = SPLCAToolConfigurationGenerator(cnf, "Chvatal", t, limit)
+                    }
+                    contains("incling") -> {
+                        generator = PairWiseConfigurationGenerator(cnf, limit)
+                    }
+                    contains("yasa") -> {
+                        generator = TWiseConfigurationGenerator(cnf, t, limit)
+                        val yasa = generator as TWiseConfigurationGenerator?
+                        yasa!!.iterations = java.lang.Integer.parseInt(algorithm!!.split("_")[1])
+                    }
+                    contains("random") -> {
+                        generator = RandomConfigurationGenerator(cnf, limit)
+                    }
+                    contains("all") -> {
+                        generator = AllConfigurationGenerator(cnf, limit)
+                    }
+                    else -> throw IllegalArgumentException("No algorithm specified!")
+                }
+            }
+
+            val result = generator!!.execute(ConsoleMonitor())
+
+            FileHandler.save(
+                Paths.get("${output}/${file.nameWithoutExtension}_${algorithm}_t${t}_${limit}.${ConfigurationListFormat().suffix}"),
+                SolutionList(cnf.getVariables(), result),
+                ConfigurationListFormat()
+            )
             exitProcess(0)
         }
 
@@ -131,7 +186,33 @@ object CLI {
                 }
             }
         } else if (file.exists()){
+            val model = FeatureModelManager.load(Paths.get(file.path))
+            val formats: MutableList<IPersistentFormat<IFeatureModel>> = mutableListOf()
 
+            if (dimacs || all) {
+                formats.add(DIMACSFormat())
+            }
+
+            if (uvl || all) {
+                formats.add(UVLFeatureModelFormat())
+            }
+
+            if (featureIde || all) {
+                formats.add(XmlFeatureModelFormat())
+            }
+
+            if (sxfm || all) {
+                formats.add(SXFMFormat())
+            }
+
+            for (format in formats) {
+                println("Converting ${file.name} to ${format.suffix}")
+                saveFeatureModel(
+                    model,
+                    "${output}/${file.nameWithoutExtension}_${format.name}.${format.suffix}",
+                    format,
+                )
+            }
         }
     }
 

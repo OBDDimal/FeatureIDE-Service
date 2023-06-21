@@ -6,26 +6,7 @@ services:
       context: .
       dockerfile: ./Dockerfile-test
     environment:
-      PORT: 8080
-      JDBC_URL: "jdbc:postgresql://testdb:5432"
-      DATABASE: featureide_test
-      DB_USERNAME: postgres
-      DB_PASSWORD: postgres
+      PORT: 10000
+      JDBC_URL: "jdbc:sqlite:file:test?mode=memory&cache=shared"
     ports:
-      - "8080:8080"
-    depends_on:
-      - testdb
-
-  testdb:
-    image: postgres
-    volumes:
-      - ./tmp/testdb:/var/lib/postgresql/testdata
-    environment:
-      POSTGRES_DB: featureide_test
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 1s
+      - "10000:10000"
