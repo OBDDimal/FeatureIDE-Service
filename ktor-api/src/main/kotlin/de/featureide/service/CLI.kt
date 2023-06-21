@@ -42,7 +42,7 @@ object CLI {
     @JvmStatic
     fun main(args: Array<String>) {
 
-        val parser = ArgParser("featureide-docker")
+        val parser = ArgParser("featureide-cli")
 
         val path by parser.option(ArgType.String, shortName = "p", description = "Input path for file or directory.").required()
         val slice by parser.option(ArgType.String, shortName = "s", description = "The names of the features that should be sliced separated by ','. For example: Antenna,AHEAD.")
