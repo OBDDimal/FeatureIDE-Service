@@ -111,6 +111,7 @@ object Configurator {
                     limit = file.limit
                 )
                 localFile.delete()
+                resultFile.delete()
 
             } catch (e: Exception){
                 configurationFileDataSource.update(
