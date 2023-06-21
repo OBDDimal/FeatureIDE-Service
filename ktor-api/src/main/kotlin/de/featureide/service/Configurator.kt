@@ -5,10 +5,13 @@ import de.featureide.service.data.slicedFileDataSource
 import de.featureide.service.exceptions.CouldNotCreateFileException
 import de.featureide.service.exceptions.CouldNotCreateRequestException
 import de.featureide.service.models.ConfigurationInput
+import de.ovgu.featureide.fm.core.IExtensionLoader
 import de.ovgu.featureide.fm.core.analysis.cnf.SolutionList
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula
 import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.*
 import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.twise.TWiseConfigurationGenerator
+import de.ovgu.featureide.fm.core.init.FMCoreLibrary
+import de.ovgu.featureide.fm.core.init.LibraryManager
 import de.ovgu.featureide.fm.core.io.csv.ConfigurationListFormat
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
 import de.ovgu.featureide.fm.core.io.manager.FileHandler
@@ -22,6 +25,11 @@ import java.nio.file.Paths
 import java.util.*
 
 object Configurator {
+
+    init {
+        LibraryManager.registerLibrary(FMCoreLibrary.getInstance())
+    }
+
     @Throws(
         CouldNotCreateFileException::class,
         CouldNotCreateRequestException::class
@@ -33,11 +41,9 @@ object Configurator {
     }
 
     suspend fun generate(file: ConfigurationInput, id: Int) {
-
-        val t = file.t
-        val limit = file.limit
-
         withContext(Dispatchers.IO) {
+            val t = file.t
+            val limit = file.limit
 
             val filePath = "files"
             Files.createDirectories(Paths.get(filePath))
@@ -51,6 +57,7 @@ object Configurator {
                 localFile.writeText(String(file.content))
 
                 val model = FeatureModelManager.load(Paths.get(localFile.path))
+
                 val cnf = FeatureModelFormula(model).cnf
 
                 var generator: IConfigurationGenerator? = null
@@ -68,7 +75,7 @@ object Configurator {
                         contains("yasa") -> {
                             generator = TWiseConfigurationGenerator(cnf, t, limit)
                             val yasa = generator as TWiseConfigurationGenerator?
-                            yasa!!.iterations = Integer.parseInt(file.algorithm.split(" ")[1])
+                            yasa!!.iterations = Integer.parseInt(file.algorithm.split("_")[1])
                         }
                         contains("random") -> {
                             generator = RandomConfigurationGenerator(cnf, limit)
@@ -80,9 +87,9 @@ object Configurator {
                     }
 
                 }
-                val result = generator!!.execute(null)
+                val result = generator!!.execute(ConsoleMonitor())
 
-                val newName = "${localFile.nameWithoutExtension}_sample.${localFile.extension}"
+                val newName = "${localFile.nameWithoutExtension}_${file.algorithm}_t${file.t}_${limit}.${ConfigurationListFormat().suffix}"
                 val pathOutputFile = "$filePath/$newName"
 
 
@@ -93,6 +100,8 @@ object Configurator {
                 )
 
                 val resultFile = File(pathOutputFile).absoluteFile
+                println(resultFile.readText())
+
                 configurationFileDataSource.update(
                     id,
                     name = newName,
@@ -102,10 +111,16 @@ object Configurator {
                     limit = file.limit
                 )
                 localFile.delete()
-                resultFile.delete()
 
             } catch (e: Exception){
-
+                configurationFileDataSource.update(
+                    id,
+                    name = "Not generated",
+                    content = e.stackTraceToString(),
+                    algorithm = file.algorithm,
+                    t = file.t,
+                    limit = file.limit
+                )
             }
         }
 

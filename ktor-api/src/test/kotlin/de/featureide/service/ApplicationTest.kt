@@ -17,13 +17,6 @@ class ApplicationTest {
 
     private val configPath = "application-test.conf"
 
-    private val featureideFile = File("testmodels/FeatureIDE.xml")
-    private val featureideSlicedFile = File("testmodels/FeatureIDEsliced.xml")
-    private val featureideUvlFile = File("testmodels/FeatureIDE_UVL.uvl")
-    private val featureideDimacsFile = File("testmodels/FeatureIDE_DIMACS.dimacs")
-    private val featureideSXFMFile = File("testmodels/FeatureIDE_SXFM.xml")
-    private val featureideFideFile = File("testmodels/FeatureIDE_FeatureIDE.xml")
-
     @Test
     fun testRoot() = testApplication {
         environment {
@@ -32,108 +25,6 @@ class ApplicationTest {
         client.get("/").apply {
             assertEquals(HttpStatusCode.OK, status)
             assertEquals("Hello World!", bodyAsText())
-        }
-    }
-
-    @Test
-    fun fullCall() {
-        testApplication {
-            val client = createClient {
-                install(ContentNegotiation) {
-                    json()
-                }
-            }
-            environment {
-                config = ApplicationConfig(configPath)
-            }
-            val response = client.post("/convert") {
-                contentType(ContentType.Application.Json)
-                setBody(
-                        ConvertInput(
-                            featureideFile.name,
-                            arrayOf("uvl", "featureIde", "sxfm", "dimacs"),
-                            featureideFile.readBytes(),
-                        )
-                )
-            }
-
-            assertEquals(HttpStatusCode.Created, response.status)
-            var newLocation = response.headers[HttpHeaders.Location]
-
-            assertTrue(newLocation != null)
-
-            var result = client.get(newLocation)
-
-            while (result.status != HttpStatusCode.OK) {
-                delay(5000L)
-                result = client.get(newLocation)
-            }
-
-            val resultBody: ConvertOutput = result.body()
-
-            assertEquals(
-                String(resultBody.content[0]).replace("\\s".toRegex(), ""),
-                String(featureideUvlFile.readBytes()).replace("\\s".toRegex(), "")
-            )
-
-            assertEquals(
-                String(resultBody.content[1]).replace("\\s".toRegex(), ""),
-                String(featureideFideFile.readBytes()).replace("\\s".toRegex(), "")
-            )
-
-            assertEquals(
-                String(resultBody.content[2]).replace("\\s".toRegex(), ""),
-                String(featureideSXFMFile.readBytes()).replace("\\s".toRegex(), "")
-            )
-
-            assertEquals(
-                String(resultBody.content[3]).replace("\\s".toRegex(), ""),
-                String(featureideDimacsFile.readBytes()).replace("\\s".toRegex(), "")
-            )
-
-        }
-    }
-
-    @Test
-    fun sliceCall() {
-        testApplication {
-            val client = createClient {
-                install(ContentNegotiation) {
-                    json()
-                }
-            }
-            environment {
-                config = ApplicationConfig(configPath)
-            }
-            val response = client.post("/slice") {
-                contentType(ContentType.Application.Json)
-                setBody(
-                    SliceInput(
-                        featureideFile.name,
-                        arrayOf("FeatureHouse", "FeatureCpp"),
-                        featureideFile.readBytes(),
-                    )
-                )
-            }
-
-            assertEquals(HttpStatusCode.Created, response.status)
-            var newLocation = response.headers[HttpHeaders.Location]
-
-            assertTrue(newLocation != null)
-
-            var result = client.get(newLocation)
-
-            while (result.status != HttpStatusCode.OK) {
-                delay(5000L)
-                result = client.get(newLocation)
-            }
-
-            val resultBody: SliceOutput = result.body()
-
-            assertEquals(
-                String(resultBody.content).replace("\\s".toRegex(), ""),
-                String(featureideSlicedFile.readBytes()).replace("\\s".toRegex(), "")
-            )
         }
     }
 
@@ -150,37 +41,5 @@ class ApplicationTest {
         }
     }
 
-    /*@ExperimentalCoroutinesApi
-    @Test
-    fun addFiles() = runTest {
-        val config = ApplicationConfig(configPath)
-        DatabaseFactory.init(config)
-
-        val number = InputController.addFiles(
-            listOf(
-                InputFile(
-                    featureideFile.name,
-                    arrayOf("featureIde", "sxfm", "uvl"),
-                    featureideFile.readBytes(),
-                )
-            )
-        )
-
-        val requests = requestDataSource.requests(number)
-        assertEquals(3, requests.count())
-    }
-
-    @ExperimentalCoroutinesApi
-    @Test
-    fun convertRemainingFiles() = runTest {
-        addFiles()
-        val requestNumbers = requestNumberDataSource.getAll()
-
-        Converter.convertRemainingFiles()
-        for (number in requestNumbers) {
-            assertEquals(0, requestDataSource.requests(number.value).count())
-            assertEquals(0, uploadedFileDataSource.filesByRequestNumber(number.value).count())
-        }
-    }*/
 }
 

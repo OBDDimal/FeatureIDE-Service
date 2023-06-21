@@ -188,24 +188,21 @@ fun Application.configureRouting(config: ApplicationConfig) {
                 "Bad Request",
                 status = HttpStatusCode.BadRequest
             )
-            val file = slicedFileDataSource.getFile(id)
-            val results = slicedFileDataSource.isReady(id)
+            val file = configurationFileDataSource.getFile(id)
+            val results = configurationFileDataSource.isReady(id)
 
             if(file == null) {
                 call.respond(HttpStatusCode.BadRequest, "File does not exist!")
-            }
-
-
-            else if(results) {
+            } else if(results) {
                 call.respond(HttpStatusCode.Accepted, "File is not ready yet!")
             } else {
-                val outputFile = slicedFileDataSource.getFile(id)
-                val sliceOutput = SliceOutput(outputFile!!)
+                val outputFile = configurationFileDataSource.getFile(id)
+                val configurationOutput = ConfigurationOutput(outputFile!!)
                 launch(Dispatchers.IO) {
-                    slicedFileDataSource.delete(id)
+                    configurationFileDataSource.delete(id)
                 }
                 call.response.status(HttpStatusCode.OK)
-                call.respond(sliceOutput)
+                call.respond(configurationOutput)
             }
         }
 

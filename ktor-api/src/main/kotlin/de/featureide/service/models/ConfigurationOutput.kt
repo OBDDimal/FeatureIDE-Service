@@ -2,6 +2,7 @@ package de.featureide.service.models
 
 @kotlinx.serialization.Serializable
 data class ConfigurationOutput(val name: String, val algorithm: String, val t: Int, val limit: Int, val content: ByteArray) {
+    constructor(file: ConfigurationFile) : this(name = file.name, algorithm = file.algorithm, content = file.content.toByteArray(), t = file.t, limit = file.limit)
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
