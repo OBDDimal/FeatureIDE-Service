@@ -2,14 +2,9 @@
 A microservice proving an RESTful API for the feature model conversion using the FeatureIDE library.
 
 ## Installation
-### Build and Run as Docker Container
 
-1. Change dir to ktor-api directory 
-2. Run docker compose up
+## How to Use CLI 
 
-Building the jar takes some time (1-2 minutes).
-
-### Use it in Intellij
 1. Download the [FeatureIDE](https://featureide.github.io/) jar and save it in the `lib` folder.
 2. Download the needed jars (currently found at [GitHub](https://github.com/FeatureIDE/FeatureIDE/tree/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib)): 
 the [antlr-3.4.jar](https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib/antlr-3.4.jar), 
@@ -17,11 +12,6 @@ the [antlr-3.4.jar](https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b0
    and [uvl-parser.jar](https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib/uvl-parser.jar) 
    into the `lib` folder.
 3. In the `build.gradle.kts` file check that the version numbers of the libraries match.
-4. Run Main Method of ApplicationTest
-
-## How to Use CLI in Intellij
-
-Use the CLI Main Method to start the Application and use the different options to get your needed Files.
 
 Value for option --path should be always provided in command line. <br />
 Usage: featureide-cli options_list <br />
@@ -48,6 +38,42 @@ For Example:  <br />
 
 All of the Files are saved after the operation in the "files/output" directory which is completely cleared before saving any files. <br />
 
+### Start in Intellij
+
+Use the CLI Main Method to start the Application and use the configurations option in Intellij to configure Commandline Arguments.
+
+### Start in Terminal
+
+Use "./gradlew run -Pcli --args="fill in arguments"" in a Terminal
+
+## How to Start Server API
+
+### Build and Run as Docker Container
+
+1. Change dir to ktor-api directory 
+2. Run docker compose up
+
+Building the jar takes some time (1-2 minutes).
+
+### Use it in Intellij
+1. Download the [FeatureIDE](https://featureide.github.io/) jar and save it in the `lib` folder.
+2. Download the needed jars (currently found at [GitHub](https://github.com/FeatureIDE/FeatureIDE/tree/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib)): 
+the [antlr-3.4.jar](https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib/antlr-3.4.jar), 
+   [org.sat4j.core.jar](https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib/org.sat4j.core.jar),
+   and [uvl-parser.jar](https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib/uvl-parser.jar) 
+   into the `lib` folder.
+3. In the `build.gradle.kts` file check that the version numbers of the libraries match.
+4. Run Main Method of Application
+
+### Use it in Terminal
+1. Download the [FeatureIDE](https://featureide.github.io/) jar and save it in the `lib` folder.
+2. Download the needed jars (currently found at [GitHub](https://github.com/FeatureIDE/FeatureIDE/tree/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib)): 
+the [antlr-3.4.jar](https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib/antlr-3.4.jar), 
+   [org.sat4j.core.jar](https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib/org.sat4j.core.jar),
+   and [uvl-parser.jar](https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib/uvl-parser.jar) 
+   into the `lib` folder.
+3. In the `build.gradle.kts` file check that the version numbers of the libraries match.
+4. Run "./gradlew run" in Commandline
 
 ## How to Use API NOT UPDATED
 
@@ -57,22 +83,7 @@ You can use this request number to check for the status of your conversion at th
 The API answers with a status.
 At the path `/result/{requestNumber}` the API returns the result of the conversion (when the service converted all requested conversions of this request) and deletes it from the server.
 
-### Status
-
-The format of the entry:
-* requestNumber: Int
-* finished: Boolean
-* amountToProcess: Int
-* resourceLocation: String
-
-#### Description
-
-* requestNumber: the number of the request
-* finished: indicates if the service finished the conversion request and all converted files are ready to be downloaded.
-* amountToProcess: the amount of files still needed to be converted by the server
-* resourceLocation: the location of the results (only set, if finished = true)
-
-### Input
+### InputSlice
 The service accepts as input a list of files as JSON.
 The format of the entry:
 * name: String
@@ -84,27 +95,27 @@ The format of the entry:
 * typeOutput: a list of types you want to convert the file to (currently supported: dimacs, uvl, sxfm, featureIde)
 * fileContent: the content of the file
 
-### Output
+### OutputSlice
 Sends a list of the outputted files as JSON.
 The format of the entry::
 * name: String
-* originalName: String
 * type: String
-* success: Boolean
 * content: array of Bytes
 
 #### Description
 * name: the name of the converted file
-* originalName: the name of the original uploaded file
 * type: the type of the converted file
-* success: indicates, if the converting was successful. If it was not successful the name is empty, and the fileContent contains the error message
 * fileContent: the content of the file
 
 ## Testing
 
-For testing you need to run a postgres database.
-The `docker-compose_text.yml` file starts a postgres database for testing.
-If you use your own solution, check that the URL in `src/main/ressources/test.conf` fits the ip and port of your database.
+1. Download the [FeatureIDE](https://featureide.github.io/) jar and save it in the `lib` folder.
+2. Download the needed jars (currently found at [GitHub](https://github.com/FeatureIDE/FeatureIDE/tree/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib)): 
+the [antlr-3.4.jar](https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib/antlr-3.4.jar), 
+   [org.sat4j.core.jar](https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib/org.sat4j.core.jar),
+   and [uvl-parser.jar](https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b09557241b854044409c958681d/plugins/de.ovgu.featureide.fm.core/lib/uvl-parser.jar) 
+   into the `lib` folder.
+3. In the `build.gradle.kts` file check that the version numbers of the libraries match.
 
-To run the `ApplicationTest` test class, run:
-`gradle test --tests "de.featureide.service.ApplicationTest"`
+To run all tests:
+`gradle test `
