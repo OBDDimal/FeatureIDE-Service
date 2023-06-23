@@ -56,10 +56,13 @@ object Propagator {
 
                 val manualLiterals = ArrayList<Int>()
                 for (feature in file.selection) {
+                    val featureInt = cnf.getVariables().getVariable(feature, true)
+                    if(featureInt != 0)
                         manualLiterals.add(
-                            cnf.getVariables().getVariable(feature, true)
+                            featureInt
                         )
                 }
+                val result = ArrayList<String>()
 
                 val analysis = CoreDeadAnalysis(cnf)
                 val intLiterals = IntArray(file.selection.size)
@@ -68,8 +71,6 @@ object Propagator {
                 }
                 analysis.assumptions = LiteralSet(*intLiterals)
                 val impliedFeatures = analysis.execute(NullMonitor())
-
-                val result = ArrayList<String>(impliedFeatures.size())
                 for (feature in impliedFeatures.literals){
                     result.add(cnf.variables.getName(feature))
                 }

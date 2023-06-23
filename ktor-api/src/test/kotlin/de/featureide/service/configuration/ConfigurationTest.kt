@@ -64,8 +64,9 @@ class ConfigurationTest {
 
             println(String(resultBody.content))
 
-            assertEquals(String(resultBody.content).replace("\\s".toRegex(), ""),
-                String(featureideConfigurationFile.readBytes()).replace("\\s".toRegex(), "")
+            assertEquals(
+                String(featureideConfigurationFile.readBytes()).replace("\\s".toRegex(), ""),
+                String(resultBody.content).replace("\\s".toRegex(), "")
             )
         }
     }

@@ -59,8 +59,8 @@ class SliceTest {
             val resultBody: SliceOutput = result.body()
 
             assertEquals(
-                String(resultBody.content).replace("\\s".toRegex(), ""),
-                String(featureideSlicedFile.readBytes()).replace("\\s".toRegex(), "")
+                String(featureideSlicedFile.readBytes()).replace("\\s".toRegex(), ""),
+                String(resultBody.content).replace("\\s".toRegex(), "")
             )
         }
     }

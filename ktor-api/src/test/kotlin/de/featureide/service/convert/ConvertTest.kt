@@ -62,23 +62,23 @@ class ConvertTest {
             val resultBody: ConvertOutput = result.body()
 
             assertEquals(
-                String(resultBody.content[0]).replace("\\s".toRegex(), ""),
-                String(featureideUvlFile.readBytes()).replace("\\s".toRegex(), "")
+                String(featureideUvlFile.readBytes()).replace("\\s".toRegex(), ""),
+                String(resultBody.content[0]).replace("\\s".toRegex(), "")
             )
 
             assertEquals(
-                String(resultBody.content[1]).replace("\\s".toRegex(), ""),
-                String(featureideFideFile.readBytes()).replace("\\s".toRegex(), "")
+                String(featureideFideFile.readBytes()).replace("\\s".toRegex(), ""),
+                String(resultBody.content[1]).replace("\\s".toRegex(), "")
             )
 
             assertEquals(
-                String(resultBody.content[2]).replace("\\s".toRegex(), ""),
-                String(featureideSXFMFile.readBytes()).replace("\\s".toRegex(), "")
+                String(featureideSXFMFile.readBytes()).replace("\\s".toRegex(), ""),
+                String(resultBody.content[2]).replace("\\s".toRegex(), "")
             )
 
             assertEquals(
-                String(resultBody.content[3]).replace("\\s".toRegex(), ""),
-                String(featureideDimacsFile.readBytes()).replace("\\s".toRegex(), "")
+                String(featureideDimacsFile.readBytes()).replace("\\s".toRegex(), ""),
+                String(resultBody.content[3]).replace("\\s".toRegex(), "")
             )
 
         }
