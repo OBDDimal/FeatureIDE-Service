@@ -2,6 +2,7 @@ package de.featureide.service.plugins
 
 import de.featureide.service.Util.Configurator
 import de.featureide.service.Util.Converter
+import de.featureide.service.Util.Propagator
 import de.featureide.service.Util.Slicer
 import de.featureide.service.data.*
 import de.featureide.service.exceptions.CouldNotCreateFileException
@@ -203,6 +204,63 @@ fun Application.configureRouting(config: ApplicationConfig) {
                 }
                 call.response.status(HttpStatusCode.OK)
                 call.respond(configurationOutput)
+            }
+        }
+
+        post("/propagate") {
+            val file = call.receive<PropagationInput>()
+            try {
+                val id = Propagator.addFileForPropagation()
+                if(id == null){
+                    throw Exception()
+                }
+                launch(Dispatchers.IO) {
+                    Propagator.propagate(file, id)
+                }
+                call.response.created(id)
+                call.respondText("Request accepted!")
+            } catch (e: CouldNotCreateRequestException) {
+                if (e.requestNumber < 0) {
+                    call.respond(HttpStatusCode.InternalServerError, "Could not queue the request.")
+                } else {
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        "A file from request ${e.requestNumber} could not be added to the database."
+                    )
+                }
+            } catch (e: CouldNotCreateFileException) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    "A request from request ${e.requestNumber} could not be added to the database."
+                )
+            } catch (e: Exception){
+                call.respond(
+                    HttpStatusCode.BadRequest
+                )
+            }
+        }
+
+        get("/propagate/{id?}") {
+            val id = call.parameters["id"]?.toInt() ?: return@get call.respondText(
+                "Bad Request",
+                status = HttpStatusCode.BadRequest
+            )
+            val file = propagationFileDataSource.getFile(id)
+            val results = propagationFileDataSource.isReady(id)
+            if(file == null)
+            {
+                call.respond(HttpStatusCode.BadRequest, "File does not exist!")
+            }
+            else if(results) {
+                call.respond(HttpStatusCode.Accepted, "File is not ready yet!")
+            } else {
+                val outputFile = propagationFileDataSource.getFile(id)
+                val convertOutput = PropagationOutput(outputFile!!)
+                launch(Dispatchers.IO) {
+                    propagationFileDataSource.delete(id)
+                }
+                call.response.status(HttpStatusCode.OK)
+                call.respond(convertOutput)
             }
         }
 

@@ -1,19 +1,19 @@
 package de.featureide.service.Util
 
-import de.featureide.service.data.configurationFileDataSource
+import de.featureide.service.data.propagationFileDataSource
 import de.featureide.service.exceptions.CouldNotCreateFileException
 import de.featureide.service.exceptions.CouldNotCreateRequestException
-import de.featureide.service.models.ConfigurationInput
-import de.ovgu.featureide.fm.core.analysis.cnf.SolutionList
+import de.featureide.service.models.PropagationInput
+import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet
+import de.ovgu.featureide.fm.core.analysis.cnf.analysis.CoreDeadAnalysis
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula
 import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.*
-import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.twise.TWiseConfigurationGenerator
+import de.ovgu.featureide.fm.core.configuration.Selection
 import de.ovgu.featureide.fm.core.init.FMCoreLibrary
 import de.ovgu.featureide.fm.core.init.LibraryManager
-import de.ovgu.featureide.fm.core.io.csv.ConfigurationListFormat
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
-import de.ovgu.featureide.fm.core.io.manager.FileHandler
-import de.ovgu.featureide.fm.core.job.monitor.ConsoleMonitor
+import de.ovgu.featureide.fm.core.job.LongRunningWrapper
+import de.ovgu.featureide.fm.core.job.monitor.NullMonitor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -32,14 +32,12 @@ object Propagator {
     )
     suspend fun addFileForPropagation(): Int? {
 
-        val id = configurationFileDataSource.addFile()?.id
+        val id = propagationFileDataSource.addFile()?.id
         return id
     }
 
-    suspend fun generate(file: ConfigurationInput, id: Int) {
+    suspend fun propagate(file: PropagationInput, id: Int) {
         withContext(Dispatchers.IO) {
-            val t = file.t
-            val limit = file.limit
 
             val filePath = "files"
             Files.createDirectories(Paths.get(filePath))
@@ -56,77 +54,44 @@ object Propagator {
 
                 val cnf = FeatureModelFormula(model).cnf
 
-                var generator: IConfigurationGenerator? = null
-                with(file.algorithm) {
-                    when {
-                        contains("icpl") -> {
-                            generator = SPLCAToolConfigurationGenerator(cnf, "ICPL", t, limit)
-                        }
-                        contains("chvatal")-> {
-                            generator = SPLCAToolConfigurationGenerator(cnf, "Chvatal", t, limit)
-                        }
-                        contains("incling") -> {
-                            generator = PairWiseConfigurationGenerator(cnf, limit)
-                        }
-                        contains("yasa") -> {
-                            generator = TWiseConfigurationGenerator(cnf, t, limit)
-                            val yasa = generator as TWiseConfigurationGenerator?
-                            var iterations: Int = 10
-                            if(file.algorithm.split("_").size > 1){
-                                try {
-                                    iterations = Integer.parseInt(file.algorithm.split("_")[1])
-                                } catch (_: Exception){
-                                }
-                            }
-                            yasa!!.iterations = iterations
-                        }
-                        contains("random") -> {
-                            generator = RandomConfigurationGenerator(cnf, limit)
-                        }
-                        contains("all") -> {
-                            generator = AllConfigurationGenerator(cnf, limit)
-                        }
-                        else -> throw IllegalArgumentException("No algorithm specified!")
-                    }
-
+                val manualLiterals = ArrayList<Int>()
+                for (feature in file.selection) {
+                        manualLiterals.add(
+                            cnf.getVariables().getVariable(feature, true)
+                        )
                 }
-                val result = generator!!.execute(ConsoleMonitor())
 
-                val newName = "${localFile.nameWithoutExtension}_${file.algorithm}_t${file.t}_${limit}.${ConfigurationListFormat().suffix}"
-                val pathOutputFile = "$filePath/$newName"
+                val analysis = CoreDeadAnalysis(cnf)
+                val intLiterals = IntArray(file.selection.size)
+                for (i in intLiterals.indices) {
+                    intLiterals[i] = manualLiterals.get(i)
+                }
+                analysis.assumptions = LiteralSet(*intLiterals)
+                val impliedFeatures = analysis.execute(NullMonitor())
 
+                val result = ArrayList<String>(impliedFeatures.size())
+                for (feature in impliedFeatures.literals){
+                    result.add(cnf.variables.getName(feature))
+                }
 
-                FileHandler.save(
-                    Paths.get(pathOutputFile),
-                    SolutionList(cnf.getVariables(), result),
-                    ConfigurationListFormat()
-                )
-
-                val resultFile = File(pathOutputFile).absoluteFile
-                println(resultFile.readText())
-
-                configurationFileDataSource.update(
+                propagationFileDataSource.update(
                     id,
-                    name = newName,
-                    content = resultFile.readText(),
-                    algorithm = file.algorithm,
-                    t = file.t,
-                    limit = file.limit
+                    name = file.name,
+                    content = String(file.content),
+                    selection = file.selection,
+                    impliedSelection = result.toTypedArray()
                 )
                 localFile.delete()
-                resultFile.delete()
 
             } catch (e: Exception){
-                configurationFileDataSource.update(
+                propagationFileDataSource.update(
                     id,
-                    name = "Not generated",
+                    name = "No Propagation",
                     content = e.stackTraceToString(),
-                    algorithm = file.algorithm,
-                    t = file.t,
-                    limit = file.limit
+                    selection = file.selection,
+                    impliedSelection = arrayOf("")
                 )
             }
         }
-
     }
 }

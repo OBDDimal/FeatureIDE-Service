@@ -34,12 +34,14 @@ object Configurator {
     )
     suspend fun addFileForConfiguration(): Int? {
 
-        val id = propagationFileDataSource.addFile()?.id
+        val id = configurationFileDataSource.addFile()?.id
         return id
     }
 
-    suspend fun propagate(file: PropagationInput, id: Int) {
+    suspend fun generate(file: ConfigurationInput, id: Int) {
         withContext(Dispatchers.IO) {
+            val t = file.t
+            val limit = file.limit
 
             val filePath = "files"
             Files.createDirectories(Paths.get(filePath))
@@ -56,27 +58,76 @@ object Configurator {
 
                 val cnf = FeatureModelFormula(model).cnf
 
-                val result = arrayOf("")
+                var generator: IConfigurationGenerator? = null
+                with(file.algorithm) {
+                    when {
+                        contains("icpl") -> {
+                            generator = SPLCAToolConfigurationGenerator(cnf, "ICPL", t, limit)
+                        }
+                        contains("chvatal")-> {
+                            generator = SPLCAToolConfigurationGenerator(cnf, "Chvatal", t, limit)
+                        }
+                        contains("incling") -> {
+                            generator = PairWiseConfigurationGenerator(cnf, limit)
+                        }
+                        contains("yasa") -> {
+                            generator = TWiseConfigurationGenerator(cnf, t, limit)
+                            val yasa = generator as TWiseConfigurationGenerator?
+                            var iterations: Int = 10
+                            if(file.algorithm.split("_").size > 1){
+                                try {
+                                    iterations = java.lang.Integer.parseInt(file.algorithm.split("_")[1])
+                                } catch (_: Exception){
+                                }
+                            }
+                            yasa!!.iterations = iterations
+                        }
+                        contains("random") -> {
+                            generator = RandomConfigurationGenerator(cnf, limit)
+                        }
+                        contains("all") -> {
+                            generator = AllConfigurationGenerator(cnf, limit)
+                        }
+                        else -> throw IllegalArgumentException("No algorithm specified!")
+                    }
 
-                propagationFileDataSource.update(
+                }
+                val result = generator!!.execute(ConsoleMonitor())
+
+                val newName = "${localFile.nameWithoutExtension}_${file.algorithm}_t${file.t}_${limit}.${ConfigurationListFormat().suffix}"
+                val pathOutputFile = "$filePath/$newName"
+
+
+                FileHandler.save(
+                    Paths.get(pathOutputFile),
+                    SolutionList(cnf.getVariables(), result),
+                    ConfigurationListFormat()
+                )
+
+                val resultFile = File(pathOutputFile).absoluteFile
+                println(resultFile.readText())
+
+                configurationFileDataSource.update(
                     id,
-                    name = file.name,
-                    content = String(file.content),
-                    selection = file.selection,
-                    impliedSelection = result
+                    name = newName,
+                    content = resultFile.readText(),
+                    algorithm = file.algorithm,
+                    t = file.t,
+                    limit = file.limit
                 )
                 localFile.delete()
+                resultFile.delete()
 
             } catch (e: Exception){
-                propagationFileDataSource.update(
+                configurationFileDataSource.update(
                     id,
-                    name = "No Propagation",
+                    name = "Not generated",
                     content = e.stackTraceToString(),
-                    selection = file.selection,
-                    impliedSelection = arrayOf("")
+                    algorithm = file.algorithm,
+                    t = file.t,
+                    limit = file.limit
                 )
             }
         }
-
     }
 }
