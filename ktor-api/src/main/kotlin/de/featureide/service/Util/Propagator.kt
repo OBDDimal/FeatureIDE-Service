@@ -1,11 +1,9 @@
-package de.featureide.service
+package de.featureide.service.Util
 
 import de.featureide.service.data.configurationFileDataSource
-import de.featureide.service.data.slicedFileDataSource
 import de.featureide.service.exceptions.CouldNotCreateFileException
 import de.featureide.service.exceptions.CouldNotCreateRequestException
 import de.featureide.service.models.ConfigurationInput
-import de.ovgu.featureide.fm.core.IExtensionLoader
 import de.ovgu.featureide.fm.core.analysis.cnf.SolutionList
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula
 import de.ovgu.featureide.fm.core.analysis.cnf.generator.configuration.*
@@ -15,16 +13,14 @@ import de.ovgu.featureide.fm.core.init.LibraryManager
 import de.ovgu.featureide.fm.core.io.csv.ConfigurationListFormat
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
 import de.ovgu.featureide.fm.core.io.manager.FileHandler
-import de.ovgu.featureide.fm.core.job.LongRunningWrapper
 import de.ovgu.featureide.fm.core.job.monitor.ConsoleMonitor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.*
 
-object Configurator {
+object Propagator {
 
     init {
         LibraryManager.registerLibrary(FMCoreLibrary.getInstance())
@@ -34,7 +30,7 @@ object Configurator {
         CouldNotCreateFileException::class,
         CouldNotCreateRequestException::class
     )
-    suspend fun addFileForConfiguration(): Int? {
+    suspend fun addFileForPropagation(): Int? {
 
         val id = configurationFileDataSource.addFile()?.id
         return id

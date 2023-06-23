@@ -1,6 +1,5 @@
-package de.featureide.service
+package de.featureide.service.Util
 
-import de.featureide.service.data.convertedFileDataSource
 import de.featureide.service.data.slicedFileDataSource
 import de.featureide.service.exceptions.CouldNotCreateFileException
 import de.featureide.service.exceptions.CouldNotCreateRequestException

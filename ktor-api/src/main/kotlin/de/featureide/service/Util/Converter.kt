@@ -1,4 +1,4 @@
-package de.featureide.service
+package de.featureide.service.Util
 
 
 import de.featureide.service.data.*
@@ -16,7 +16,6 @@ import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
 import de.ovgu.featureide.fm.core.io.sxfm.SXFMFormat
 import de.ovgu.featureide.fm.core.io.uvl.UVLFeatureModelFormat
 import de.ovgu.featureide.fm.core.io.xml.XmlFeatureModelFormat
-import io.ktor.util.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File

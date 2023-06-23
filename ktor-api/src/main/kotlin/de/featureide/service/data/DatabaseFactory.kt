@@ -24,6 +24,7 @@ object DatabaseFactory {
             SchemaUtils.create(SlicedFiles)
             SchemaUtils.create(ConvertedFiles)
             SchemaUtils.create(ConfigurationFiles)
+            SchemaUtils.create(PropagationFiles)
         }
     }
 
