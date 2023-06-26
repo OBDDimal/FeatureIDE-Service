@@ -20,8 +20,16 @@ kotlin {
 group = "de"
 version = "0.0.1"
 application {
-    if (project.hasProperty("cli")){
-        mainClass.set("de.featureide.service.CLI")
+    if (project.hasProperty("cli")) {
+        if (project.property("cli")!!.equals("conf")) {
+            mainClass.set("de.featureide.service.util.Configurator")
+        } else if (project.property("cli")!!.equals("conv")) {
+            mainClass.set("de.featureide.service.util.Converter")
+        } else if (project.property("cli")!!.equals("slice")) {
+            mainClass.set("de.featureide.service.util.Slicer")
+        } else if (project.property("cli")!!.equals("prop")) {
+            mainClass.set("de.featureide.service.util.Propagator")
+        }
     } else {
         mainClass.set("io.ktor.server.netty.EngineMain")
     }

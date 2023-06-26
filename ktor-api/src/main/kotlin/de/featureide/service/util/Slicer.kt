@@ -1,4 +1,4 @@
-package de.featureide.service.Util
+package de.featureide.service.util
 
 import de.featureide.service.data.slicedFileDataSource
 import de.featureide.service.exceptions.CouldNotCreateFileException
@@ -13,14 +13,58 @@ import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
 import de.ovgu.featureide.fm.core.io.xml.XmlFeatureModelFormat
 import de.ovgu.featureide.fm.core.job.SliceFeatureModel
 import de.ovgu.featureide.fm.core.job.monitor.NullMonitor
+import kotlinx.cli.ArgParser
+import kotlinx.cli.ArgType
+import kotlinx.cli.required
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.stream.Collectors
+import kotlin.system.exitProcess
 
 object Slicer {
+
+    @Throws(IOException::class)
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val parser = ArgParser("featureide-cli")
+
+        val path by parser.option(ArgType.String, shortName = "p", description = "Input path for file or directory.").required()
+        val selection by parser.option(ArgType.String, shortName = "s", description = "The names of the features that should be sliced separated by ','. For example: Antenna,AHEAD.")
+
+        parser.parse(args)
+
+
+        val file = File(path)
+
+        val output = "./files/output"
+
+        File(output).deleteRecursively()
+
+        Files.createDirectories(Paths.get(output))
+
+        //slices the featureModel
+        if (!selection.isNullOrEmpty()){
+            if(file.isDirectory() || !file.exists()) exitProcess(0)
+            var model = FeatureModelManager.load(Paths.get(file.path))
+            val featuresToSlice = ArrayList<IFeature>()
+
+            for (name in selection!!.split(",")){
+                featuresToSlice.add(model.getFeature(name))
+            }
+            model = slice(model, featuresToSlice)
+            saveFeatureModel(
+                model,
+                "${output}/${file.nameWithoutExtension}.${XmlFeatureModelFormat().suffix}",
+                XmlFeatureModelFormat()
+            )
+            exitProcess(0)
+        }
+    }
+
 
     init {
         LibraryManager.registerLibrary(FMCoreLibrary.getInstance())

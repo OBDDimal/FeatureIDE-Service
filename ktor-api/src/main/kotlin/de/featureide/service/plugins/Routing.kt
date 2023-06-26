@@ -1,9 +1,9 @@
 package de.featureide.service.plugins
 
-import de.featureide.service.Util.Configurator
-import de.featureide.service.Util.Converter
-import de.featureide.service.Util.Propagator
-import de.featureide.service.Util.Slicer
+import de.featureide.service.util.Configurator
+import de.featureide.service.util.Converter
+import de.featureide.service.util.Propagator
+import de.featureide.service.util.Slicer
 import de.featureide.service.data.*
 import de.featureide.service.exceptions.CouldNotCreateFileException
 import de.featureide.service.exceptions.CouldNotCreateRequestException
