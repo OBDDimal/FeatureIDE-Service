@@ -13,30 +13,49 @@ the [antlr-3.4.jar](https://github.com/FeatureIDE/FeatureIDE/raw/3373c95f3d3f2b0
    into the `lib` folder.
 3. In the `build.gradle.kts` file check that the version numbers of the libraries match.
 
-Value for option --path should be always provided in command line. <br />
-Usage: featureide-cli options_list <br />
+### For Converting and Check
 Options:  
-
-   --path, -p -> Input path for file or directory. (always required) { String } <br />
-    --slice, -s -> The names of the features that should be sliced separated by ','. For example: Antenna,AHEAD. { String } <br />
+    --path, -p -> Input path for file or directory. (always required) { String } <br />
     --check, -c -> Input path for the second file that should be checked with the first one. { String } <br />
-    --algorithm, -alg -> The algorithm to generate a configuration sample as csv file { String } <br />
     --all, -a [false] -> Parsers all files from path into all formats.  <br />
     --dimacs, -d [false] -> Parses all files from path into dimacs files. <br />
     --uvl, -u [false] -> Parses all files from path into uvl files. <br />
     --sxfm, -sf [false] -> Parses all files from path into sxfm(xml) files. <br />
     --featureIde, -fi [false] -> Parses all files from path into featureIde(xml) files. <br />
+
+    For Example:  <br />
+    -p "FeatureIDE.xml" -c "FeatureIDE2.dimacs"  --> Checks if the Hashes of both files are the same after Converting it to the same format <br />
+    -p "FeatureIDE.xml" -u  --> This command takes the FeatureIDE.xml File and converts it to an uvl file <br />
+    
+### For Slicing
+Options:  
+    --path, -p -> Input path for file. (always required) { String } <br />
+    --selection, -s -> The names of the features that should be sliced separated by ','. For example: Antenna,AHEAD. { String } <br />
+
+    For Example:  <br />
+    -p "FeatureIDE.xml" -s "Antenna"  --> This command takes the FeatureIDE.xml File and slices out the Feature Antenna <br />
+    
+### For Configuration Samples
+Options:  
+    --path, -p -> Input path for file. (always required) { String } <br />
+    --algorithm, -alg -> The algorithm to generate a configuration sample as csv file { String } <br />
     --t, -t [0] -> The t wise pairing that should be covered by the configuration sample { Int } <br />
     --limit, -l [2147483647] -> The maximum amount of configurations for the configuration sample { Int } <br />
-    --help, -h -> Usage info  <br />
 
-For Example:  <br />
--p "FeatureIDE.xml" -s "Antenna"  --> This command takes the FeatureIDE.xml File and slices out the Feature Antenna <br />
--p "FeatureIDE.xml" -c "FeatureIDE2.dimacs"  --> Checks if the Hashes of both files are the same after Converting it to the same format <br />
--p "FeatureIDE.xml" -alg "yasa_50" -t 2 -l 10  --> This command takes the FeatureIDE.xml File and gives an sampling for the model with the parameters iterations 50, 2-wise and a limit of 10 <br />
--p "FeatureIDE.xml" -u  --> This command takes the FeatureIDE.xml File and converts it to an uvl file <br />
+    For Example:  <br />
+    -p "FeatureIDE.xml" -alg "yasa_50" -t 2 -l 10  --> This command takes the FeatureIDE.xml File and gives an sampling for the model with the parameters iterations 50, 2-wise and a limit of 10 <br />
+
+### For DecisionPropagation
+Options:  
+    --path, -p -> Input path for file. (always required) { String } <br />
+    --selection, -s -> The names of the features that are already selected separated by ','. For example: Antenna,AHEAD. { String } <br />
+
+    For Example:  <br />
+    -p "FeatureIDE.xml" -s "Antenna"  --> This command takes the FeatureIDE.xml File and returns a Array of Features that need to be selected to provide a valid configuration <br />
+
 
 All of the Files are saved after the operation in the "files/output" directory which is completely cleared before saving any files. <br />
+ --help, -h -> Usage info  <br />
 
 ### Start in Intellij
 
@@ -44,8 +63,15 @@ Use the CLI Main Method to start the Application and use the configurations opti
 
 ### Start in Terminal
 
-Use "./gradlew run -Pcli --args="fill in arguments"" in a Terminal
+Use "./gradlew run -Pcli="typeOfCLI" --args="fill in arguments"" in a Terminal
 
+The different types are: 
+* conv - Converting files and checking
+* slice - Slicing FMs
+* conf - Configuration Samples
+* prop - Decision Propagation
+
+  
 ## How to Start Server API
 
 ### Build and Run as Docker Container
