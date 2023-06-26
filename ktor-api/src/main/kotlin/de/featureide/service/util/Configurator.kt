@@ -34,11 +34,24 @@ object Configurator {
 
         val parser = ArgParser("featureide-cli")
 
-        val path by parser.option(ArgType.String, shortName = "p", description = "Input path for file or directory.").required()
+        val path by parser.option(ArgType.String, shortName = "p", description = "Input path for file or directory.")
+            .required()
 
-        val algorithm by parser.option(ArgType.String, shortName = "alg", description = "The algorithm to generate a configuration sample as csv file")
-        val t by parser.option(ArgType.Int, shortName = "t", description = "The t wise pairing that should be covered by the configuration sample").default(0)
-        val limit by parser.option(ArgType.Int, shortName = "l", description = "The maximum amount of configurations for the configuration sample").default(Int.MAX_VALUE)
+        val algorithm by parser.option(
+            ArgType.String,
+            shortName = "alg",
+            description = "The algorithm to generate a configuration sample as csv file"
+        )
+        val t by parser.option(
+            ArgType.Int,
+            shortName = "t",
+            description = "The t wise pairing that should be covered by the configuration sample"
+        ).default(0)
+        val limit by parser.option(
+            ArgType.Int,
+            shortName = "l",
+            description = "The maximum amount of configurations for the configuration sample"
+        ).default(Int.MAX_VALUE)
 
         parser.parse(args)
         val file = File(path)
@@ -46,54 +59,110 @@ object Configurator {
         File(output).deleteRecursively()
         Files.createDirectories(Paths.get(output))
 
-        if (!algorithm.isNullOrEmpty()){
-            if(file.isDirectory() || !file.exists()) exitProcess(0)
-            val model = FeatureModelManager.load(Paths.get(file.path))
+        if (!algorithm.isNullOrEmpty()) {
+            if (file.isDirectory()) {
+                val inputFiles = file.listFiles()
+                for (fileFromList in inputFiles!!) {
+                    if (fileFromList.isDirectory) {
+                        continue
+                    }
+                    try {
+                        val model = FeatureModelManager.load(Paths.get(fileFromList.path))
 
-            val cnf = FeatureModelFormula(model).cnf
+                        val cnf = FeatureModelFormula(model).cnf
 
-            var generator: IConfigurationGenerator? = null
-            with(algorithm!!) {
-                when {
-                    contains("icpl") -> {
-                        generator = SPLCAToolConfigurationGenerator(cnf, "ICPL", t, limit)
-                    }
-                    contains("chvatal")-> {
-                        generator = SPLCAToolConfigurationGenerator(cnf, "Chvatal", t, limit)
-                    }
-                    contains("incling") -> {
-                        generator = PairWiseConfigurationGenerator(cnf, limit)
-                    }
-                    contains("yasa") -> {
-                        generator = TWiseConfigurationGenerator(cnf, t, limit)
-                        val yasa = generator as TWiseConfigurationGenerator?
-                        var iterations: Int = 10
-                        if(algorithm!!.split("_").size > 1){
-                            try {
-                                iterations = Integer.parseInt(algorithm!!.split("_")[1])
-                            } catch (_: Exception){
+                        var generator: IConfigurationGenerator? = null
+                        with(algorithm!!) {
+                            when {
+
+                                contains("incling") -> {
+                                    generator = PairWiseConfigurationGenerator(cnf, limit)
+                                }
+
+                                contains("yasa") -> {
+                                    generator = TWiseConfigurationGenerator(cnf, t, limit)
+                                    val yasa = generator as TWiseConfigurationGenerator?
+                                    var iterations: Int = 1
+                                    if (algorithm!!.split("_").size > 1) {
+                                        try {
+                                            iterations = Integer.parseInt(algorithm!!.split("_")[1])
+                                        } catch (_: Exception) {
+                                        }
+                                    }
+                                    yasa!!.iterations = iterations
+                                }
+
+                                contains("random") -> {
+                                    generator = RandomConfigurationGenerator(cnf, limit)
+                                }
+
+                                contains("all") -> {
+                                    generator = AllConfigurationGenerator(cnf, limit)
+                                }
+
+                                else -> throw IllegalArgumentException("No algorithm specified!")
                             }
                         }
-                        yasa!!.iterations = iterations
+
+                        val result = generator!!.execute(ConsoleMonitor())
+
+                        FileHandler.save(
+                            Paths.get("${output}/${file.nameWithoutExtension}_${algorithm}_t${t}_${limit}.${ConfigurationListFormat().suffix}"),
+                            SolutionList(cnf.getVariables(), result),
+                            ConfigurationListFormat()
+                        )
+                    } catch (e: Exception){
+                        println("Fehler")
                     }
-                    contains("random") -> {
-                        generator = RandomConfigurationGenerator(cnf, limit)
-                    }
-                    contains("all") -> {
-                        generator = AllConfigurationGenerator(cnf, limit)
-                    }
-                    else -> throw IllegalArgumentException("No algorithm specified!")
                 }
+
+            } else if (file.exists()) {
+                val model = FeatureModelManager.load(Paths.get(file.path))
+
+                val cnf = FeatureModelFormula(model).cnf
+
+                var generator: IConfigurationGenerator? = null
+                with(algorithm!!) {
+                    when {
+
+                        contains("incling") -> {
+                            generator = PairWiseConfigurationGenerator(cnf, limit)
+                        }
+
+                        contains("yasa") -> {
+                            generator = TWiseConfigurationGenerator(cnf, t, limit)
+                            val yasa = generator as TWiseConfigurationGenerator?
+                            var iterations: Int = 10
+                            if (algorithm!!.split("_").size > 1) {
+                                try {
+                                    iterations = Integer.parseInt(algorithm!!.split("_")[1])
+                                } catch (_: Exception) {
+                                }
+                            }
+                            yasa!!.iterations = iterations
+                        }
+
+                        contains("random") -> {
+                            generator = RandomConfigurationGenerator(cnf, limit)
+                        }
+
+                        contains("all") -> {
+                            generator = AllConfigurationGenerator(cnf, limit)
+                        }
+
+                        else -> throw IllegalArgumentException("No algorithm specified!")
+                    }
+                }
+
+                val result = generator!!.execute(ConsoleMonitor())
+
+                FileHandler.save(
+                    Paths.get("${output}/${file.nameWithoutExtension}_${algorithm}_t${t}_${limit}.${ConfigurationListFormat().suffix}"),
+                    SolutionList(cnf.getVariables(), result),
+                    ConfigurationListFormat()
+                )
+                exitProcess(0)
             }
-
-            val result = generator!!.execute(ConsoleMonitor())
-
-            FileHandler.save(
-                Paths.get("${output}/${file.nameWithoutExtension}_${algorithm}_t${t}_${limit}.${ConfigurationListFormat().suffix}"),
-                SolutionList(cnf.getVariables(), result),
-                ConfigurationListFormat()
-            )
-            exitProcess(0)
         }
 
     }
@@ -135,40 +204,40 @@ object Configurator {
                 var generator: IConfigurationGenerator? = null
                 with(file.algorithm) {
                     when {
-                        contains("icpl") -> {
-                            generator = SPLCAToolConfigurationGenerator(cnf, "ICPL", t, limit)
-                        }
-                        contains("chvatal")-> {
-                            generator = SPLCAToolConfigurationGenerator(cnf, "Chvatal", t, limit)
-                        }
+
                         contains("incling") -> {
                             generator = PairWiseConfigurationGenerator(cnf, limit)
                         }
+
                         contains("yasa") -> {
                             generator = TWiseConfigurationGenerator(cnf, t, limit)
                             val yasa = generator as TWiseConfigurationGenerator?
                             var iterations: Int = 10
-                            if(file.algorithm.split("_").size > 1){
+                            if (file.algorithm.split("_").size > 1) {
                                 try {
                                     iterations = java.lang.Integer.parseInt(file.algorithm.split("_")[1])
-                                } catch (_: Exception){
+                                } catch (_: Exception) {
                                 }
                             }
                             yasa!!.iterations = iterations
                         }
+
                         contains("random") -> {
                             generator = RandomConfigurationGenerator(cnf, limit)
                         }
+
                         contains("all") -> {
                             generator = AllConfigurationGenerator(cnf, limit)
                         }
+
                         else -> throw IllegalArgumentException("No algorithm specified!")
                     }
 
                 }
                 val result = generator!!.execute(ConsoleMonitor())
 
-                val newName = "${localFile.nameWithoutExtension}_${file.algorithm}_t${file.t}_${limit}.${ConfigurationListFormat().suffix}"
+                val newName =
+                    "${localFile.nameWithoutExtension}_${file.algorithm}_t${file.t}_${limit}.${ConfigurationListFormat().suffix}"
                 val pathOutputFile = "$filePath/$newName"
 
 
@@ -192,7 +261,7 @@ object Configurator {
                 localFile.delete()
                 resultFile.delete()
 
-            } catch (e: Exception){
+            } catch (e: Exception) {
                 configurationFileDataSource.update(
                     id,
                     name = "Not generated",

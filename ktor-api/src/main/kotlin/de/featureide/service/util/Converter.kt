@@ -38,13 +38,38 @@ object Converter {
     fun main(args: Array<String>) {
         val parser = ArgParser("featureide-cli")
 
-        val path by parser.option(ArgType.String, shortName = "p", description = "Input path for file or directory.").required()
-        val check by parser.option(ArgType.String, shortName = "c", description = "Input path for the second file that should be checked with the first one.")
-        val all by parser.option(ArgType.Boolean, shortName = "a", description = "Parsers all files from path into all formats.").default(false)
-        val dimacs by parser.option(ArgType.Boolean, shortName = "d", description = "Parses all files from path into dimacs files.").default(false)
-        val uvl by parser.option(ArgType.Boolean, shortName = "u", description = "Parses all files from path into uvl files.").default(false)
-        val sxfm by parser.option(ArgType.Boolean, shortName = "sf", description = "Parses all files from path into sxfm(xml) files.").default(false)
-        val featureIde by parser.option(ArgType.Boolean, shortName = "fi", description = "Parses all files from path into featureIde(xml) files.").default(false)
+        val path by parser.option(ArgType.String, shortName = "p", description = "Input path for file or directory.")
+            .required()
+        val check by parser.option(
+            ArgType.String,
+            shortName = "c",
+            description = "Input path for the second file that should be checked with the first one."
+        )
+        val all by parser.option(
+            ArgType.Boolean,
+            shortName = "a",
+            description = "Parsers all files from path into all formats."
+        ).default(false)
+        val dimacs by parser.option(
+            ArgType.Boolean,
+            shortName = "d",
+            description = "Parses all files from path into dimacs files."
+        ).default(false)
+        val uvl by parser.option(
+            ArgType.Boolean,
+            shortName = "u",
+            description = "Parses all files from path into uvl files."
+        ).default(false)
+        val sxfm by parser.option(
+            ArgType.Boolean,
+            shortName = "sf",
+            description = "Parses all files from path into sxfm(xml) files."
+        ).default(false)
+        val featureIde by parser.option(
+            ArgType.Boolean,
+            shortName = "fi",
+            description = "Parses all files from path into featureIde(xml) files."
+        ).default(false)
 
         parser.parse(args)
 
@@ -58,9 +83,9 @@ object Converter {
         Files.createDirectories(Paths.get(output))
 
         //checks if two featureModels are the same
-        if (!check.isNullOrEmpty()){
+        if (!check.isNullOrEmpty()) {
             val file2 = File(check)
-            if(file.isDirectory() || !file.exists() || file2.isDirectory() || !file2.exists()) exitProcess(0)
+            if (file.isDirectory() || !file.exists() || file2.isDirectory() || !file2.exists()) exitProcess(0)
             val model = FeatureModelManager.load(Paths.get(file.path))
             val model2 = FeatureModelManager.load(Paths.get(file2.path))
 
@@ -81,47 +106,46 @@ object Converter {
         }
 
         // If the file is a directory all files in the directory
-        if(file.isDirectory){
+        if (file.isDirectory) {
             val inputFiles = file.listFiles()
-            inputFiles?.let { files ->
-                for (fileFromList in files) {
-                    if (fileFromList.isDirectory) {
-                        continue
-                    }
-                    try {
-                        val model = FeatureModelManager.load(Paths.get(fileFromList.path))
-                        val formats: MutableList<IPersistentFormat<IFeatureModel>> = mutableListOf()
-
-                        if (dimacs || all) {
-                            formats.add(DIMACSFormat())
-                        }
-
-                        if (uvl || all) {
-                            formats.add(UVLFeatureModelFormat())
-                        }
-
-                        if (featureIde || all) {
-                            formats.add(XmlFeatureModelFormat())
-                        }
-
-                        if (sxfm || all) {
-                            formats.add(SXFMFormat())
-                        }
-
-                        for (format in formats) {
-                            println("Converting ${file.name} to ${format.suffix}")
-                            saveFeatureModel(
-                                model,
-                                "${output}/${fileFromList.nameWithoutExtension}.${format.suffix}",
-                                format,
-                            )
-                        }
-                    } catch (e: Exception){
-                        println("Could not convert file.")
-                    }
+            for (fileFromList in inputFiles!!) {
+                if (fileFromList.isDirectory) {
+                    continue
                 }
+                try {
+                    val model = FeatureModelManager.load(Paths.get(fileFromList.path))
+                    val formats: MutableList<IPersistentFormat<IFeatureModel>> = mutableListOf()
+
+                    if (dimacs || all) {
+                        formats.add(DIMACSFormat())
+                    }
+
+                    if (uvl || all) {
+                        formats.add(UVLFeatureModelFormat())
+                    }
+
+                    if (featureIde || all) {
+                        formats.add(XmlFeatureModelFormat())
+                    }
+
+                    if (sxfm || all) {
+                        formats.add(SXFMFormat())
+                    }
+
+                    for (format in formats) {
+                        println("Converting ${file.name} to ${format.suffix}")
+                        saveFeatureModel(
+                            model,
+                            "${output}/${fileFromList.nameWithoutExtension}.${format.suffix}",
+                            format,
+                        )
+                    }
+                } catch (e: Exception) {
+                    println("Could not convert file.")
+                }
+
             }
-        } else if (file.exists()){
+        } else if (file.exists()) {
             try {
                 val model = FeatureModelManager.load(Paths.get(file.path))
                 val formats: MutableList<IPersistentFormat<IFeatureModel>> = mutableListOf()
@@ -248,6 +272,7 @@ object Converter {
             }
         }
     }
+
     private fun saveFeatureModel(model: IFeatureModel?, savePath: String, format: IPersistentFormat<IFeatureModel>?) {
         FeatureModelManager.save(model, Paths.get(savePath), format)
     }
