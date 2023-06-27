@@ -68,6 +68,7 @@ dependencies {
     implementation(files("lib/org.sat4j.core.jar"))
     implementation(files("lib/antlr-3.4.jar"))
     implementation(files("lib/uvl-parser.jar"))
+    implementation(files("lib/SPLCAT.jar"))
     testImplementation("io.ktor:ktor-server-test-host-jvm:2.3.1")
 
     //kotlin commandline parser

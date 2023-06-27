@@ -75,6 +75,15 @@ object Configurator {
                         with(algorithm!!) {
                             when {
 
+                                contains("icpl") -> {
+                                    generator = SPLCAToolConfigurationGenerator(cnf, "ICPL", t, limit)
+                                }
+
+                                contains("chvatal") -> {
+                                    generator = SPLCAToolConfigurationGenerator(cnf, "Chvatal", t, limit)
+                                }
+
+
                                 contains("incling") -> {
                                     generator = PairWiseConfigurationGenerator(cnf, limit)
                                 }
@@ -124,6 +133,14 @@ object Configurator {
                 var generator: IConfigurationGenerator? = null
                 with(algorithm!!) {
                     when {
+
+                        contains("icpl") -> {
+                            generator = SPLCAToolConfigurationGenerator(cnf, "ICPL", t, limit)
+                        }
+
+                        contains("chvatal") -> {
+                            generator = SPLCAToolConfigurationGenerator(cnf, "Chvatal", t, limit)
+                        }
 
                         contains("incling") -> {
                             generator = PairWiseConfigurationGenerator(cnf, limit)
@@ -204,6 +221,14 @@ object Configurator {
                 var generator: IConfigurationGenerator? = null
                 with(file.algorithm) {
                     when {
+
+                        contains("icpl") -> {
+                            generator = SPLCAToolConfigurationGenerator(cnf, "ICPL", t, limit)
+                        }
+
+                        contains("chvatal") -> {
+                            generator = SPLCAToolConfigurationGenerator(cnf, "Chvatal", t, limit)
+                        }
 
                         contains("incling") -> {
                             generator = PairWiseConfigurationGenerator(cnf, limit)
