@@ -64,7 +64,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.1")
 
-    implementation(files("lib/de.ovgu.featureide.lib.fm-v3.9.2.jar"))
+    implementation(files("lib/de.ovgu.featureide.lib.fm-v3.9.3_new.jar"))
     implementation(files("lib/org.sat4j.core.jar"))
     implementation(files("lib/antlr-3.4.jar"))
     implementation(files("lib/uvl-parser.jar"))
