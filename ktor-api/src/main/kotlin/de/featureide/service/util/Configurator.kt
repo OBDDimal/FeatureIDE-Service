@@ -22,6 +22,7 @@ import kotlinx.cli.required
 import kotlinx.coroutines.*
 import java.io.File
 import java.io.IOException
+import java.lang.StringBuilder
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.Duration
@@ -62,7 +63,7 @@ object Configurator {
             ArgType.Int,
             shortName = "ti",
             description = "Timelimit for the yasa algorithm in seconds"
-        ).default(10)
+        ).default(-1)
 
         parser.parse(args)
         val file = File(path)
@@ -72,6 +73,10 @@ object Configurator {
 
         if (!algorithm.isNullOrEmpty()) {
             if (file.isDirectory()) {
+
+                val sb = StringBuilder()
+                sb.append("Filename;Time;Configurations\n")
+
                 val inputFiles = file.listFiles()
                 for (fileFromList in inputFiles!!) {
                     if (fileFromList.isDirectory) {
@@ -126,42 +131,45 @@ object Configurator {
 
                         val monitor = ConsoleMonitor<List<LiteralSet>>()
                         var result = ArrayList<LiteralSet>()
+                        val start = LocalDateTime.now()
                         if (generator is TWiseConfigurationGenerator?) {
                             GlobalScope.launch(Dispatchers.IO) {
                                 result = ArrayList(generator!!.execute(monitor))
                             }
-
                             val yasa = generator as TWiseConfigurationGenerator?
-                            val start = LocalDateTime.now()
-
                             while (result.size == 0) {
                                 if (Duration.between(start, LocalDateTime.now()).seconds >= time) {
                                     monitor.cancel()
                                     break
                                 }
                             }
-
                             if (result.size == 0) {
                                 yasa!!.resultList.stream().forEach {
+                                    it.clear()
                                     result.add(it.completeSolution)
                                 }
                             }
-
-                            println("Systemzeit: " + LocalDateTime.now() + " " + result.size + " " + fileFromList.nameWithoutExtension)
-
                         } else {
                             result = ArrayList(generator!!.execute(monitor))
                         }
+                        println(fileFromList.nameWithoutExtension + ": " + result.size)
+
+                        sb.append(fileFromList.nameWithoutExtension+";"+Duration.between(start, LocalDateTime.now()).toString() + ";" + result.size + "\n")
 
                         FileHandler.save(
                             Paths.get("${output}/${fileFromList.nameWithoutExtension}_${algorithm}_t${t}_${limit}.${ConfigurationListFormat().suffix}"),
                             SolutionList(cnf.variables, result),
                             ConfigurationListFormat()
                         )
+
+
+
                     } catch (e: Exception) {
                         println(e.stackTraceToString())
                     }
                 }
+                val info = File("${output}/informations.csv")
+                info.writeText(sb.toString())
 
             } else if (file.exists()) {
                 try {
@@ -233,7 +241,7 @@ object Configurator {
                             }
                         }
 
-                        println("Systemzeit: " + LocalDateTime.now() + " " + result.size)
+                        println(file.nameWithoutExtension + ": " + result.size)
 
                     } else {
                         result = ArrayList(generator!!.execute(monitor))
