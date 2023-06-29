@@ -1,3 +1,5 @@
+import de.undercouch.gradle.tasks.download.Download
+
 val ktor_version: String by project
 val kotlin_version: String by project
 val logback_version: String by project
@@ -5,17 +7,27 @@ val exposed_version: String by project
 val postgresql_version: String by project
 val hikaricp_version: String by project
 
+val featureide_version: String = "v3.9.3"
+// val featureide_jar_url: String = "https://github.com/FeatureIDE/FeatureIDE/releases/download/${featureide_version}/de.ovgu.featureide.lib.fm-${featureide_version}.jar"
+val featureide_jar_url: String = "https://cloudstore.uni-ulm.de/s/mH3xSAiMnSSHCex/download/de.ovgu.featureide.lib.fm-v3.9.3_new.jar"
+val antlr_jar_url: String = "https://github.com/FeatureIDE/FeatureIDE/raw/${featureide_version}/plugins/de.ovgu.featureide.fm.core/lib/antlr-3.4.jar"
+val sat4j_jar_url: String = "https://github.com/FeatureIDE/FeatureIDE/raw/${featureide_version}/plugins/de.ovgu.featureide.fm.core/lib/org.sat4j.core.jar"
+val uvl_jar_url: String = "https://github.com/FeatureIDE/FeatureIDE/raw/${featureide_version}/plugins/de.ovgu.featureide.fm.core/lib/uvl-parser.jar"
+val splcat_jar_url: String = "https://github.com/FeatureIDE/FeatureIDE/raw/${featureide_version}/plugins/de.ovgu.featureide.fm.core/lib/SPLCAT.jar"
+
+
 plugins {
     application
     kotlin("jvm") version "1.8.21"
     id("io.ktor.plugin") version "2.3.1"
     id("org.jetbrains.kotlin.plugin.serialization") version "1.8.21"
+    id("de.undercouch.download") version "5.4.0"
 }
+
 
 kotlin {
-    jvmToolchain(19)
+    jvmToolchain(17)
 }
-
 
 group = "de"
 version = "0.0.1"
@@ -73,4 +85,24 @@ dependencies {
 
     //kotlin commandline parser
     implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.5")
+}
+
+tasks.register<Download>("download_jar_dependencies") {
+    doFirst{
+        src(listOf(
+            featureide_jar_url,
+            antlr_jar_url,
+            sat4j_jar_url,
+            uvl_jar_url,
+            splcat_jar_url
+        ))
+        dest("lib")
+        overwrite(false)
+    }
+}
+
+defaultTasks("download_jar_dependencies")
+
+tasks.compileKotlin {
+    dependsOn("download_jar_dependencies")
 }
