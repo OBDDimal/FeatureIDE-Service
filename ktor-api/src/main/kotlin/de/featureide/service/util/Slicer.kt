@@ -41,9 +41,6 @@ object Slicer {
         val file = File(path)
 
         val output = "./files/output"
-
-        File(output).deleteRecursively()
-
         Files.createDirectories(Paths.get(output))
 
         //slices the featureModel
@@ -53,7 +50,7 @@ object Slicer {
             model = slice(model, selection!!.split(",").toTypedArray())
             saveFeatureModel(
                 model,
-                "${output}/${file.nameWithoutExtension}.${XmlFeatureModelFormat().suffix}",
+                "${output}/${file.nameWithoutExtension}_sliced.${XmlFeatureModelFormat().suffix}",
                 XmlFeatureModelFormat()
             )
             exitProcess(0)
@@ -98,7 +95,7 @@ object Slicer {
                     id,
                     name = newName,
                     content = result.readText(),
-                    featuresSliced = file.featuresToSlice.joinToString()
+                    featuresSliced = file.featuresToSlice
                 )
                 localFile.delete()
                 result.delete()
@@ -108,7 +105,7 @@ object Slicer {
                     id,
                     name = "Not sliced",
                     content = "Could not slice file",
-                    featuresSliced = file.featuresToSlice.joinToString()
+                    featuresSliced = file.featuresToSlice
                 )
             }
         }

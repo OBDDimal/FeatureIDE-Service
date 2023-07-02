@@ -5,7 +5,7 @@ import org.jetbrains.exposed.sql.Table
 data class SlicedFile(
     val id: Int,
     val name: String,
-    val featuresSliced: String,
+    val featuresSliced: Array<String>,
     val content: String,
 )
 

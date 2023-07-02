@@ -73,13 +73,8 @@ object Converter {
         ).default(false)
 
         parser.parse(args)
-
-
         val file = File(path)
-
         val output = "./files/output"
-
-        File(output).deleteRecursively()
 
         Files.createDirectories(Paths.get(output))
 
@@ -141,7 +136,7 @@ object Converter {
                             format,
                         )
                     }
-                }  catch (e: Exception) {
+                } catch (e: Exception) {
                     println(e.stackTraceToString())
                 }
 

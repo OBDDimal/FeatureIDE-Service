@@ -13,7 +13,7 @@ class SlicedFileDataSource : SlicedFileDAO {
         id = row[SlicedFiles.id],
         name = row[SlicedFiles.name],
         content = row[SlicedFiles.content],
-        featuresSliced = row[SlicedFiles.featuresSliced]
+        featuresSliced = row[SlicedFiles.featuresSliced].split(":::").toTypedArray()
     )
 
     override suspend fun getFile(id: Int): SlicedFile? = dbQuery {
@@ -39,11 +39,11 @@ class SlicedFileDataSource : SlicedFileDAO {
         SlicedFiles.deleteWhere { SlicedFiles.id eq id } > 0
     }
 
-    override suspend fun update(id: Int, content: String, name: String, featuresSliced: String): Boolean = dbQuery {
+    override suspend fun update(id: Int, content: String, name: String, featuresSliced: Array<String>): Boolean = dbQuery {
         SlicedFiles.update({ SlicedFiles.id eq id }) {
             it[SlicedFiles.name] = name
             it[SlicedFiles.content] = content
-            it[SlicedFiles.featuresSliced] = featuresSliced
+            it[SlicedFiles.featuresSliced] = featuresSliced.joinToString(":::")
         } > 0
     }
 

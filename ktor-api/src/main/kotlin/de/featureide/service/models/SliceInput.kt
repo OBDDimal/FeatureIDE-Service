@@ -10,7 +10,7 @@ data class SliceInput(val name: String, val featuresToSlice: Array<String>, val 
         other as SliceInput
 
         if (name != other.name) return false
-        if (featuresToSlice != other.featuresToSlice) return false
+        if (!featuresToSlice.contentEquals(other.featuresToSlice)) return false
         if (!content.contentEquals(other.content)) return false
 
         return true

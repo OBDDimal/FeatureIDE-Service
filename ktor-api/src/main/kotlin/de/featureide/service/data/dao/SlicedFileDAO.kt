@@ -12,6 +12,6 @@ interface SlicedFileDAO {
 
     suspend fun delete(id: Int): Boolean
 
-    suspend fun update(id: Int, content: String, name: String, featuresSliced: String): Boolean
+    suspend fun update(id: Int, content: String, name: String, featuresSliced: Array<String>): Boolean
 
 }

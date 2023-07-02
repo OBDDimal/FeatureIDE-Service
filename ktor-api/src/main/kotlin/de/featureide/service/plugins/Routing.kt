@@ -97,7 +97,7 @@ fun Application.configureRouting(config: ApplicationConfig) {
             }
         }
 
-        get("/{action}/{id?}") {
+        get("/{action}/{id}") {
             val id = call.parameters["id"]?.toInt() ?: return@get call.respondText(
                 "Bad Request",
                 status = HttpStatusCode.BadRequest

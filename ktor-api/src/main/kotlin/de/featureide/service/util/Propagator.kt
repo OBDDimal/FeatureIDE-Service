@@ -39,9 +39,6 @@ object Propagator {
         val file = File(path)
 
         val output = "./files/output"
-
-        File(output).deleteRecursively()
-
         Files.createDirectories(Paths.get(output))
 
         //Propagates the implied features

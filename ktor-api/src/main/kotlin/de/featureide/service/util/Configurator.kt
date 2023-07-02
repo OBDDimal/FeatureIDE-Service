@@ -70,7 +70,6 @@ object Configurator {
         parser.parse(args)
         val file = File(path)
         val output = "./files/output"
-        //File(output).deleteRecursively()
         Files.createDirectories(Paths.get(output))
 
         if (!algorithm.isNullOrEmpty()) {
