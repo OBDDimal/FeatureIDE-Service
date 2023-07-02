@@ -68,7 +68,7 @@ object Configurator {
         parser.parse(args)
         val file = File(path)
         val output = "./files/output"
-        File(output).deleteRecursively()
+        //File(output).deleteRecursively()
         Files.createDirectories(Paths.get(output))
 
         if (!algorithm.isNullOrEmpty()) {
@@ -138,7 +138,7 @@ object Configurator {
                             }
                             val yasa = generator as TWiseConfigurationGenerator?
                             while (result.size == 0) {
-                                if (Duration.between(start, LocalDateTime.now()).seconds >= time) {
+                                if (Duration.between(start, LocalDateTime.now()).seconds >= time && time != -1) {
                                     monitor.cancel()
                                     break
                                 }
@@ -152,7 +152,7 @@ object Configurator {
                         } else {
                             result = ArrayList(generator!!.execute(monitor))
                         }
-                        println(fileFromList.nameWithoutExtension + ": " + result.size)
+                        println(fileFromList.nameWithoutExtension + ": " + result.size + " in " + Duration.between(start, LocalDateTime.now()).toString())
 
                         sb.append(fileFromList.nameWithoutExtension+";"+Duration.between(start, LocalDateTime.now()).toString() + ";" + result.size + "\n")
 
@@ -227,12 +227,11 @@ object Configurator {
                         val yasa = generator as TWiseConfigurationGenerator?
                         val start = LocalDateTime.now()
                         while (result.size == 0) {
-                            if (Duration.between(start, LocalDateTime.now()).seconds >= time) {
+                            if (Duration.between(start, LocalDateTime.now()).seconds >= time && time != -1) {
                                 monitor.cancel()
                                 break
                             }
                         }
-
 
                         if (result.size == 0) {
                             yasa!!.resultList.stream().forEach {
@@ -241,7 +240,7 @@ object Configurator {
                             }
                         }
 
-                        println(file.nameWithoutExtension + ": " + result.size)
+                        println(file.nameWithoutExtension + ": " + result.size + " in " + Duration.between(start, LocalDateTime.now()).toString())
 
                     } else {
                         result = ArrayList(generator!!.execute(monitor))
