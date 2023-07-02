@@ -24,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.lang.NullPointerException
 import java.math.BigInteger
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -140,8 +141,8 @@ object Converter {
                             format,
                         )
                     }
-                } catch (e: Exception) {
-                    println("Could not convert file.")
+                }  catch (e: Exception) {
+                    println(e.stackTraceToString())
                 }
 
             }
@@ -175,7 +176,7 @@ object Converter {
                     )
                 }
             } catch (e: Exception) {
-                println("Could not convert file.")
+                println(e.stackTraceToString())
             }
         }
     }
@@ -308,16 +309,6 @@ object Converter {
         const val UVL = 1
         const val FEATURE_IDE = 2
         const val SXFM = 3
-    }
-
-    @Throws(
-        CouldNotCreateFileException::class,
-        CouldNotCreateRequestException::class
-    )
-    suspend fun addFileForConvert(): Int? {
-
-        val id = convertedFileDataSource.addFile()?.id
-        return id
     }
 }
 

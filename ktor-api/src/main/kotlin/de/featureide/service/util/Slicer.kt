@@ -50,12 +50,7 @@ object Slicer {
         if (!selection.isNullOrEmpty()){
             if(file.isDirectory() || !file.exists()) exitProcess(0)
             var model = FeatureModelManager.load(Paths.get(file.path))
-            val featuresToSlice = ArrayList<IFeature>()
-
-            for (name in selection!!.split(",")){
-                featuresToSlice.add(model.getFeature(name))
-            }
-            model = slice(model, featuresToSlice)
+            model = slice(model, selection!!.split(",").toTypedArray())
             saveFeatureModel(
                 model,
                 "${output}/${file.nameWithoutExtension}.${XmlFeatureModelFormat().suffix}",
@@ -70,7 +65,7 @@ object Slicer {
         LibraryManager.registerLibrary(FMCoreLibrary.getInstance())
     }
 
-    suspend fun slice(sliceFile: SliceInput, id: Int) {
+    suspend fun slice(file: SliceInput, id: Int) {
         withContext(Dispatchers.IO) {
 
             val filePath = "files"
@@ -80,18 +75,14 @@ object Slicer {
             try {
                 directory.listFiles().forEach { it.delete() }
 
-                val localFile = File("$filePath/${sliceFile.name}")
-                localFile.writeText(String(sliceFile.content))
+                val localFile = File("$filePath/${file.name}")
+                localFile.writeText(String(file.content))
 
                 val format: IPersistentFormat<IFeatureModel> = XmlFeatureModelFormat()
 
                 var model = FeatureModelManager.load(Paths.get(localFile.path))
-                val featuresToSlice = ArrayList<IFeature>()
 
-                for (name in sliceFile.featuresToSlice) {
-                    featuresToSlice.add(model.getFeature(name))
-                }
-                model = slice(model, featuresToSlice)
+                model = slice(model, file.featuresToSlice)
 
                 val newName = "${localFile.nameWithoutExtension}_sliced.${format.suffix}"
                 val pathOutputFile = "$filePath/$newName"
@@ -107,7 +98,7 @@ object Slicer {
                     id,
                     name = newName,
                     content = result.readText(),
-                    featuresSliced = sliceFile.featuresToSlice.joinToString()
+                    featuresSliced = file.featuresToSlice.joinToString()
                 )
                 localFile.delete()
                 result.delete()
@@ -117,7 +108,7 @@ object Slicer {
                     id,
                     name = "Not sliced",
                     content = "Could not slice file",
-                    featuresSliced = sliceFile.featuresToSlice.joinToString()
+                    featuresSliced = file.featuresToSlice.joinToString()
                 )
             }
         }
@@ -127,9 +118,21 @@ object Slicer {
         FeatureModelManager.save(model, Paths.get(savePath), format)
     }
 
-    private fun slice(featureModel: IFeatureModel, featuresToRemove: Collection<IFeature>?): IFeatureModel? {
+    /**
+     * Slice selected features from a feature model
+     *
+     * @param featureModel The feature model to slice the features
+     * @param selection The selection of features to get the implied features
+     * @return IFeatureModel Returns the new featuremodel without the selected features
+     */
+    private fun slice(featureModel: IFeatureModel, selection: Array<String>): IFeatureModel? {
+        val featuresToSlice = ArrayList<IFeature>()
+
+        for (name in selection) {
+            featuresToSlice.add(featureModel.getFeature(name))
+        }
         val featuresToKeep: MutableSet<IFeature> = HashSet(featureModel.features)
-        featuresToKeep.removeAll(featuresToRemove!!.toSet())
+        featuresToKeep.removeAll(featuresToSlice.toSet())
         val featureNamesToKeep: Set<String> = featuresToKeep.stream().map { obj: IFeature -> obj.name }.collect(
             Collectors.toSet()
         )
@@ -139,16 +142,6 @@ object Slicer {
         } catch (e: Exception) {
             throw e
         }
-    }
-
-    @Throws(
-        CouldNotCreateFileException::class,
-        CouldNotCreateRequestException::class
-    )
-    suspend fun addFileForSlice(): Int? {
-
-        val id = slicedFileDataSource.addFile()?.id
-        return id
     }
 }
 

@@ -4,6 +4,7 @@ import de.featureide.service.data.configurationFileDataSource
 import de.featureide.service.exceptions.CouldNotCreateFileException
 import de.featureide.service.exceptions.CouldNotCreateRequestException
 import de.featureide.service.models.ConfigurationInput
+import de.ovgu.featureide.fm.core.analysis.cnf.CNF
 import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet
 import de.ovgu.featureide.fm.core.analysis.cnf.SolutionList
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula
@@ -22,6 +23,7 @@ import kotlinx.cli.required
 import kotlinx.coroutines.*
 import java.io.File
 import java.io.IOException
+import java.lang.NullPointerException
 import java.lang.StringBuilder
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -87,71 +89,10 @@ object Configurator {
 
                         val cnf = FeatureModelFormula(model).cnf
 
-                        var generator: IConfigurationGenerator? = null
-                        with(algorithm!!) {
-                            when {
-
-                                contains("icpl") -> {
-                                    generator = SPLCAToolConfigurationGenerator(cnf, "ICPL", t, limit)
-                                }
-
-                                contains("chvatal") -> {
-                                    generator = SPLCAToolConfigurationGenerator(cnf, "Chvatal", t, limit)
-                                }
-
-
-                                contains("incling") -> {
-                                    generator = PairWiseConfigurationGenerator(cnf, limit)
-                                }
-
-                                contains("yasa") -> {
-                                    generator = TWiseConfigurationGenerator(cnf, t, limit)
-                                    val yasa = generator as TWiseConfigurationGenerator?
-                                    var iterations: Int = 1
-                                    if (algorithm!!.split("_").size > 1) {
-                                        try {
-                                            iterations = Integer.parseInt(algorithm!!.split("_")[1])
-                                        } catch (_: Exception) {
-                                        }
-                                    }
-                                    yasa!!.iterations = iterations
-                                }
-
-                                contains("random") -> {
-                                    generator = RandomConfigurationGenerator(cnf, limit)
-                                }
-
-                                contains("all") -> {
-                                    generator = AllConfigurationGenerator(cnf, limit)
-                                }
-
-                                else -> throw IllegalArgumentException("No algorithm specified!")
-                            }
-                        }
-
-                        val monitor = ConsoleMonitor<List<LiteralSet>>()
-                        var result = ArrayList<LiteralSet>()
                         val start = LocalDateTime.now()
-                        if (generator is TWiseConfigurationGenerator?) {
-                            GlobalScope.launch(Dispatchers.IO) {
-                                result = ArrayList(generator!!.execute(monitor))
-                            }
-                            val yasa = generator as TWiseConfigurationGenerator?
-                            while (result.size == 0) {
-                                if (Duration.between(start, LocalDateTime.now()).seconds >= time && time != -1) {
-                                    monitor.cancel()
-                                    break
-                                }
-                            }
-                            if (result.size == 0) {
-                                yasa!!.resultList.stream().forEach {
-                                    it.clear()
-                                    result.add(it.completeSolution)
-                                }
-                            }
-                        } else {
-                            result = ArrayList(generator!!.execute(monitor))
-                        }
+
+                        val result = generateSamples(cnf, t, limit, time, algorithm!!)
+
                         println(fileFromList.nameWithoutExtension + ": " + result.size + " in " + Duration.between(start, LocalDateTime.now()).toString())
 
                         sb.append(fileFromList.nameWithoutExtension+";"+Duration.between(start, LocalDateTime.now()).toString() + ";" + result.size + "\n")
@@ -162,8 +103,8 @@ object Configurator {
                             ConfigurationListFormat()
                         )
 
-
-
+                    } catch (e: NullPointerException) {
+                        println("Could not convert file, because file could not be converted to a feature model.")
                     } catch (e: Exception) {
                         println(e.stackTraceToString())
                     }
@@ -177,74 +118,7 @@ object Configurator {
 
                     val cnf = FeatureModelFormula(model).cnf
 
-                    var generator: IConfigurationGenerator? = null
-                    with(algorithm!!) {
-                        when {
-
-                            contains("icpl") -> {
-                                generator = SPLCAToolConfigurationGenerator(cnf, "ICPL", t, limit)
-                            }
-
-                            contains("chvatal") -> {
-                                generator = SPLCAToolConfigurationGenerator(cnf, "Chvatal", t, limit)
-                            }
-
-                            contains("incling") -> {
-                                generator = PairWiseConfigurationGenerator(cnf, limit)
-                            }
-
-                            contains("yasa") -> {
-                                generator = TWiseConfigurationGenerator(cnf, t, limit)
-                                val yasa = generator as TWiseConfigurationGenerator?
-                                var iterations: Int = 1
-                                if (algorithm!!.split("_").size > 1) {
-                                    try {
-                                        iterations = Integer.parseInt(algorithm!!.split("_")[1])
-                                    } catch (_: Exception) {
-                                    }
-                                }
-                                yasa!!.iterations = iterations
-                            }
-
-                            contains("random") -> {
-                                generator = RandomConfigurationGenerator(cnf, limit)
-                            }
-
-                            contains("all") -> {
-                                generator = AllConfigurationGenerator(cnf, limit)
-                            }
-
-                            else -> throw IllegalArgumentException("No algorithm specified!")
-                        }
-                    }
-                    val monitor = ConsoleMonitor<List<LiteralSet>>()
-                    var result = ArrayList<LiteralSet>()
-                    if (generator is TWiseConfigurationGenerator?) {
-                        GlobalScope.launch(Dispatchers.IO) {
-                            result = ArrayList(generator!!.execute(monitor))
-                        }
-
-                        val yasa = generator as TWiseConfigurationGenerator?
-                        val start = LocalDateTime.now()
-                        while (result.size == 0) {
-                            if (Duration.between(start, LocalDateTime.now()).seconds >= time && time != -1) {
-                                monitor.cancel()
-                                break
-                            }
-                        }
-
-                        if (result.size == 0) {
-                            yasa!!.resultList.stream().forEach {
-                                it.clear()
-                                result.add(it.completeSolution)
-                            }
-                        }
-
-                        println(file.nameWithoutExtension + ": " + result.size + " in " + Duration.between(start, LocalDateTime.now()).toString())
-
-                    } else {
-                        result = ArrayList(generator!!.execute(monitor))
-                    }
+                    val result = generateSamples(cnf, t, limit, time, algorithm!!)
 
                     FileHandler.save(
                         Paths.get("${output}/${file.nameWithoutExtension}_${algorithm}_t${t}_${limit}.${ConfigurationListFormat().suffix}"),
@@ -252,6 +126,8 @@ object Configurator {
                         ConfigurationListFormat()
                     )
                     exitProcess(0)
+                } catch (e: NullPointerException) {
+                    println("Could not convert file, because file could not be converted to a feature model.")
                 } catch (e: Exception) {
                     println(e.stackTraceToString())
                 }
@@ -262,16 +138,6 @@ object Configurator {
 
     init {
         LibraryManager.registerLibrary(FMCoreLibrary.getInstance())
-    }
-
-    @Throws(
-        CouldNotCreateFileException::class,
-        CouldNotCreateRequestException::class
-    )
-    suspend fun addFileForConfiguration(): Int? {
-
-        val id = configurationFileDataSource.addFile()?.id
-        return id
     }
 
     suspend fun generate(file: ConfigurationInput, id: Int) {
@@ -294,48 +160,7 @@ object Configurator {
 
                 val cnf = FeatureModelFormula(model).cnf
 
-                var generator: IConfigurationGenerator? = null
-                with(file.algorithm) {
-                    when {
-
-                        contains("icpl") -> {
-                            generator = SPLCAToolConfigurationGenerator(cnf, "ICPL", t, limit)
-                        }
-
-                        contains("chvatal") -> {
-                            generator = SPLCAToolConfigurationGenerator(cnf, "Chvatal", t, limit)
-                        }
-
-                        contains("incling") -> {
-                            generator = PairWiseConfigurationGenerator(cnf, limit)
-                        }
-
-                        contains("yasa") -> {
-                            generator = TWiseConfigurationGenerator(cnf, t, limit)
-                            val yasa = generator as TWiseConfigurationGenerator?
-                            var iterations: Int = 1
-                            if (file.algorithm.split("_").size > 1) {
-                                try {
-                                    iterations = java.lang.Integer.parseInt(file.algorithm.split("_")[1])
-                                } catch (_: Exception) {
-                                }
-                            }
-                            yasa!!.iterations = iterations
-                        }
-
-                        contains("random") -> {
-                            generator = RandomConfigurationGenerator(cnf, limit)
-                        }
-
-                        contains("all") -> {
-                            generator = AllConfigurationGenerator(cnf, limit)
-                        }
-
-                        else -> throw IllegalArgumentException("No algorithm specified!")
-                    }
-
-                }
-                val result = generator!!.execute(ConsoleMonitor())
+                val result = generateSamples(cnf, t, limit, -1, file.algorithm)
 
                 val newName =
                     "${localFile.nameWithoutExtension}_${file.algorithm}_t${file.t}_${limit}.${ConfigurationListFormat().suffix}"
@@ -374,4 +199,85 @@ object Configurator {
             }
         }
     }
+
+    /**
+     * Generate samples from a cnf with different parameters
+     *
+     * @param cnf CNF of the feature model to generate samples
+     * @param t The number of t-wise pairings that are needed for the algorithm
+     * @param limit The limit of samples a feature model should return
+     * @param time The time limit for the algorithm only with yasa
+     * @param algorithm The algorithm to generate the samples
+     * @return List<LiteralSet> The samples as a list of literalset
+     */
+    fun generateSamples(cnf: CNF, t: Int, limit: Int, time: Int, algorithm: String): List<LiteralSet>{
+        var generator: IConfigurationGenerator? = null
+        with(algorithm) {
+            when {
+
+                contains("icpl") -> {
+                    generator = SPLCAToolConfigurationGenerator(cnf, "ICPL", t, limit)
+                }
+
+                contains("chvatal") -> {
+                    generator = SPLCAToolConfigurationGenerator(cnf, "Chvatal", t, limit)
+                }
+
+                contains("incling") -> {
+                    generator = PairWiseConfigurationGenerator(cnf, limit)
+                }
+
+                contains("yasa") -> {
+                    generator = TWiseConfigurationGenerator(cnf, t, limit)
+                    val yasa = generator as TWiseConfigurationGenerator?
+                    var iterations: Int = 1
+                    if (algorithm.split("_").size > 1) {
+                        try {
+                            iterations = java.lang.Integer.parseInt(algorithm.split("_")[1])
+                        } catch (_: Exception) {
+                        }
+                    }
+                    yasa!!.iterations = iterations
+                }
+
+                contains("random") -> {
+                    generator = RandomConfigurationGenerator(cnf, limit)
+                }
+
+                contains("all") -> {
+                    generator = AllConfigurationGenerator(cnf, limit)
+                }
+
+                else -> throw IllegalArgumentException("No algorithm specified!")
+            }
+
+        }
+        val monitor = ConsoleMonitor<List<LiteralSet>>()
+        var result = ArrayList<LiteralSet>()
+        if (generator is TWiseConfigurationGenerator? && time != -1) {
+            GlobalScope.launch(Dispatchers.IO) {
+                result = ArrayList(generator!!.execute(monitor))
+            }
+
+            val yasa = generator as TWiseConfigurationGenerator?
+            val start = LocalDateTime.now()
+            while (result.size == 0) {
+                if (Duration.between(start, LocalDateTime.now()).seconds >= time) {
+                    monitor.cancel()
+                    break
+                }
+            }
+
+            if (result.size == 0) {
+                yasa!!.resultList.stream().forEach {
+                    it.clear()
+                    result.add(it.completeSolution)
+                }
+            }
+        } else {
+            result = ArrayList(generator!!.execute(monitor))
+        }
+        return result
+    }
+
 }

@@ -35,7 +35,7 @@ class PropagationTest {
             environment {
                 config = ApplicationConfig(configPath)
             }
-            val response = client.post("/propagate") {
+            val response = client.post("/propagation") {
                 contentType(ContentType.Application.Json)
                 setBody(
                     PropagationInput(
@@ -78,7 +78,7 @@ class PropagationTest {
             environment {
                 config = ApplicationConfig(configPath)
             }
-            val response = client.post("/propagate") {
+            val response = client.post("/propagation") {
                 contentType(ContentType.Application.Json)
                 setBody(
                     PropagationInput(
@@ -121,7 +121,7 @@ class PropagationTest {
             environment {
                 config = ApplicationConfig(configPath)
             }
-            val response = client.post("/propagate") {
+            val response = client.post("/propagation") {
                 contentType(ContentType.Application.Json)
                 setBody(
                     PropagationInput(

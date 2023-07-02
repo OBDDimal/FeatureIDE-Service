@@ -4,14 +4,13 @@ import de.featureide.service.data.propagationFileDataSource
 import de.featureide.service.exceptions.CouldNotCreateFileException
 import de.featureide.service.exceptions.CouldNotCreateRequestException
 import de.featureide.service.models.PropagationInput
+import de.ovgu.featureide.fm.core.analysis.cnf.CNF
 import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet
 import de.ovgu.featureide.fm.core.analysis.cnf.analysis.CoreDeadAnalysis
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula
-import de.ovgu.featureide.fm.core.base.IFeature
 import de.ovgu.featureide.fm.core.init.FMCoreLibrary
 import de.ovgu.featureide.fm.core.init.LibraryManager
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
-import de.ovgu.featureide.fm.core.io.xml.XmlFeatureModelFormat
 import de.ovgu.featureide.fm.core.job.monitor.NullMonitor
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
@@ -20,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.lang.NullPointerException
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.system.exitProcess
@@ -47,50 +47,26 @@ object Propagator {
         //Propagates the implied features
         if (!selection.isNullOrEmpty()){
             if(file.isDirectory() || !file.exists()) exitProcess(0)
-            val model = FeatureModelManager.load(Paths.get(file.path))
+            try {
+                val model = FeatureModelManager.load(Paths.get(file.path))
 
-            val cnf = FeatureModelFormula(model).cnf
+                val cnf = FeatureModelFormula(model).cnf
 
-            val manualLiterals = ArrayList<Int>()
-            for (feature in selection!!.split(",")) {
-                val featureInt = cnf.getVariables().getVariable(feature, true)
-                if(featureInt != 0)
-                    manualLiterals.add(
-                        featureInt
-                    )
-            }
-            val result = ArrayList<String>()
+                val result = generateImpliedFeatures(selection!!.split(",").toTypedArray(), cnf)
 
-            val analysis = CoreDeadAnalysis(cnf)
-            val intLiterals = IntArray(selection!!.split(",").size)
-            for (i in intLiterals.indices) {
-                intLiterals[i] = manualLiterals.get(i)
-            }
-            analysis.assumptions = LiteralSet(*intLiterals)
-            val impliedFeatures = analysis.execute(NullMonitor())
-            for (feature in impliedFeatures.literals){
-                result.add(cnf.variables.getName(feature))
+                val localFile = File("${output}/${file.nameWithoutExtension}_ImpliedFeatures.txt")
+                localFile.writeText(result.joinToString())
+            } catch (e: NullPointerException) {
+                println("Could not convert file, because file could not be converted to a feature model.")
+            } catch (e: Exception) {
+                println(e.stackTraceToString())
             }
 
-            val localFile = File("${output}/${file.nameWithoutExtension}_ImpliedFeatures.txt")
-            localFile.writeText(result.joinToString())
             exitProcess(0)
         }
     }
-
-
     init {
         LibraryManager.registerLibrary(FMCoreLibrary.getInstance())
-    }
-
-    @Throws(
-        CouldNotCreateFileException::class,
-        CouldNotCreateRequestException::class
-    )
-    suspend fun addFileForPropagation(): Int? {
-
-        val id = propagationFileDataSource.addFile()?.id
-        return id
     }
 
     suspend fun propagate(file: PropagationInput, id: Int) {
@@ -111,26 +87,7 @@ object Propagator {
 
                 val cnf = FeatureModelFormula(model).cnf
 
-                val manualLiterals = ArrayList<Int>()
-                for (feature in file.selection) {
-                    val featureInt = cnf.getVariables().getVariable(feature, true)
-                    if(featureInt != 0)
-                        manualLiterals.add(
-                            featureInt
-                        )
-                }
-                val result = ArrayList<String>()
-
-                val analysis = CoreDeadAnalysis(cnf)
-                val intLiterals = IntArray(file.selection.size)
-                for (i in intLiterals.indices) {
-                    intLiterals[i] = manualLiterals.get(i)
-                }
-                analysis.assumptions = LiteralSet(*intLiterals)
-                val impliedFeatures = analysis.execute(NullMonitor())
-                for (feature in impliedFeatures.literals){
-                    result.add(cnf.variables.getName(feature))
-                }
+                val result = generateImpliedFeatures(file.selection, cnf)
 
                 propagationFileDataSource.update(
                     id,
@@ -151,5 +108,38 @@ object Propagator {
                 )
             }
         }
+    }
+
+
+    /**
+     * Generate implied features from a cnf with a selection of features
+     *
+     * @param cnf CNF of the feature model to generate the implied features
+     * @param selection The selection of features to get the implied features
+     * @return List<String> The samples as a list of literalset
+     */
+    fun generateImpliedFeatures(selection: Array<String>, cnf: CNF): List<String> {
+        val manualLiterals = ArrayList<Int>()
+        for (feature in selection) {
+            val featureInt = cnf.getVariables().getVariable(feature, true)
+            if(featureInt != 0)
+                manualLiterals.add(
+                    featureInt
+                )
+        }
+        val result = ArrayList<String>()
+
+        val analysis = CoreDeadAnalysis(cnf)
+        val intLiterals = IntArray(selection.size)
+        for (i in intLiterals.indices) {
+            intLiterals[i] = manualLiterals.get(i)
+        }
+        analysis.assumptions = LiteralSet(*intLiterals)
+        val impliedFeatures = analysis.execute(NullMonitor())
+        for (feature in impliedFeatures.literals){
+            result.add(cnf.variables.getName(feature))
+        }
+
+        return result
     }
 }
