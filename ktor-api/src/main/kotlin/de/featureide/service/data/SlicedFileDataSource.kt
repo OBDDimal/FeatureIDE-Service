@@ -13,7 +13,7 @@ class SlicedFileDataSource : SlicedFileDAO {
         id = row[SlicedFiles.id],
         name = row[SlicedFiles.name],
         content = row[SlicedFiles.content],
-        featuresSliced = row[SlicedFiles.featuresSliced].split(":::").toTypedArray()
+        selection = row[SlicedFiles.selection].split(":::").toTypedArray()
     )
 
     override suspend fun getFile(id: Int): SlicedFile? = dbQuery {
@@ -24,7 +24,7 @@ class SlicedFileDataSource : SlicedFileDAO {
         val insert = SlicedFiles.insert {
             it[SlicedFiles.name] = ""
             it[SlicedFiles.content] = ""
-            it[SlicedFiles.featuresSliced] = ""
+            it[SlicedFiles.selection] = ""
         }
 
         insert.resultedValues?.singleOrNull()?.let(::resultRowToFile)
@@ -39,11 +39,11 @@ class SlicedFileDataSource : SlicedFileDAO {
         SlicedFiles.deleteWhere { SlicedFiles.id eq id } > 0
     }
 
-    override suspend fun update(id: Int, content: String, name: String, featuresSliced: Array<String>): Boolean = dbQuery {
+    override suspend fun update(id: Int, content: String, name: String, featuresToSlice: Array<String>): Boolean = dbQuery {
         SlicedFiles.update({ SlicedFiles.id eq id }) {
             it[SlicedFiles.name] = name
             it[SlicedFiles.content] = content
-            it[SlicedFiles.featuresSliced] = featuresSliced.joinToString(":::")
+            it[SlicedFiles.selection] = featuresToSlice.joinToString(":::")
         } > 0
     }
 

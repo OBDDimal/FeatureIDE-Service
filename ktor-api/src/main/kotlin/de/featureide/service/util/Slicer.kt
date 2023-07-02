@@ -79,7 +79,7 @@ object Slicer {
 
                 var model = FeatureModelManager.load(Paths.get(localFile.path))
 
-                model = slice(model, file.featuresToSlice)
+                model = slice(model, file.selection)
 
                 val newName = "${localFile.nameWithoutExtension}_sliced.${format.suffix}"
                 val pathOutputFile = "$filePath/$newName"
@@ -95,7 +95,7 @@ object Slicer {
                     id,
                     name = newName,
                     content = result.readText(),
-                    featuresSliced = file.featuresToSlice
+                    featuresSliced = file.selection
                 )
                 localFile.delete()
                 result.delete()
@@ -105,7 +105,7 @@ object Slicer {
                     id,
                     name = "Not sliced",
                     content = "Could not slice file",
-                    featuresSliced = file.featuresToSlice
+                    featuresSliced = file.selection
                 )
             }
         }

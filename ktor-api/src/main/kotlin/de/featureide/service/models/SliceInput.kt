@@ -1,7 +1,7 @@
 package de.featureide.service.models
 
 @kotlinx.serialization.Serializable
-data class SliceInput(val name: String, val featuresToSlice: Array<String>, val content: ByteArray) {
+data class SliceInput(val name: String, val selection: Array<String>, val content: ByteArray) {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -10,7 +10,7 @@ data class SliceInput(val name: String, val featuresToSlice: Array<String>, val 
         other as SliceInput
 
         if (name != other.name) return false
-        if (!featuresToSlice.contentEquals(other.featuresToSlice)) return false
+        if (!selection.contentEquals(other.selection)) return false
         if (!content.contentEquals(other.content)) return false
 
         return true
@@ -18,7 +18,7 @@ data class SliceInput(val name: String, val featuresToSlice: Array<String>, val 
 
     override fun hashCode(): Int {
         var result = name.hashCode()
-        result = 31 * result + featuresToSlice.hashCode()
+        result = 31 * result + selection.hashCode()
         result = 31 * result + content.contentHashCode()
         return result
     }
