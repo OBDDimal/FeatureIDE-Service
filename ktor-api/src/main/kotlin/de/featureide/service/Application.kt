@@ -18,6 +18,7 @@ fun Application.module() {
     install(CORS){
         anyHost()
         allowHeader(HttpHeaders.ContentType)
+        exposeHeader(HttpHeaders.Location)
     }
 }
 
