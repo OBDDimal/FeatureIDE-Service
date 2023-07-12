@@ -7,7 +7,6 @@ import de.featureide.service.models.*
 import de.featureide.service.util.*
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.config.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -15,7 +14,7 @@ import io.ktor.server.routing.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-fun Application.configureRouting(config: ApplicationConfig) {
+fun Application.configureRouting() {
     install(StatusPages) {
         exception<AuthenticationException> { call, _ ->
             call.respond(HttpStatusCode.Unauthorized)
@@ -34,42 +33,35 @@ fun Application.configureRouting(config: ApplicationConfig) {
             try {
                 var id: Int = -1
                 val action = Action.valueOf(call.parameters["action"]!!.uppercase())
+                val result: Any
                 when (action) {
                     Action.CONVERT -> {
                         val file = call.receive<ConvertInput>()
                         id = addFile(action)
-                        launch(Dispatchers.IO) {
-                            Converter.convert(file, id)
-                        }
+                        result = Converter.convert(file, id)
                     }
 
                     Action.SLICE -> {
                         val file = call.receive<SliceInput>()
                         id = addFile(action)
-                        launch(Dispatchers.IO) {
-                            Slicer.slice(file, id)
-                        }
+                        result = Slicer.slice(file, id)
                     }
 
                     Action.CONFIGURATION -> {
                         val file = call.receive<ConfigurationInput>()
                         id = addFile(action)
-                        launch(Dispatchers.IO) {
-                            Configurator.generate(file, id)
-                        }
+                        result = Configurator.generate(file, id)
                     }
 
                     Action.PROPAGATION -> {
                         val file = call.receive<PropagationInput>()
                         id = addFile(action)
-                        launch(Dispatchers.IO) {
-                            Propagator.propagate(file, id)
-                        }
+                        result = Propagator.propagate(file, id)
                     }
                 }
                 if (id != -1) {
                     call.response.created(id)
-                    call.respondText("Request accepted!")
+                    call.respond(result)
                 } else {
                     call.respond(
                         HttpStatusCode.BadRequest
@@ -114,9 +106,6 @@ fun Application.configureRouting(config: ApplicationConfig) {
                     } else {
                         val outputFile = convertedFileDataSource.getFile(id)
                         val convertOutput = ConvertOutput(outputFile!!)
-                        launch(Dispatchers.IO) {
-                            convertedFileDataSource.delete(id)
-                        }
                         call.response.status(HttpStatusCode.OK)
                         call.respond(convertOutput)
                     }
@@ -133,9 +122,6 @@ fun Application.configureRouting(config: ApplicationConfig) {
                     } else {
                         val outputFile = slicedFileDataSource.getFile(id)
                         val sliceOutput = SliceOutput(outputFile!!)
-                        launch(Dispatchers.IO) {
-                            slicedFileDataSource.delete(id)
-                        }
                         call.response.status(HttpStatusCode.OK)
                         call.respond(sliceOutput)
                     }
@@ -152,9 +138,6 @@ fun Application.configureRouting(config: ApplicationConfig) {
                     } else {
                         val outputFile = configurationFileDataSource.getFile(id)
                         val configurationOutput = ConfigurationOutput(outputFile!!)
-                        launch(Dispatchers.IO) {
-                            configurationFileDataSource.delete(id)
-                        }
                         call.response.status(HttpStatusCode.OK)
                         call.respond(configurationOutput)
                     }
@@ -170,11 +153,69 @@ fun Application.configureRouting(config: ApplicationConfig) {
                     } else {
                         val outputFile = propagationFileDataSource.getFile(id)
                         val convertOutput = PropagationOutput(outputFile!!)
+                        call.response.status(HttpStatusCode.OK)
+                        call.respond(convertOutput)
+                    }
+                }
+            }
+        }
+
+        delete("/{action}/{id}") {
+            val id = call.parameters["id"]?.toInt() ?: return@delete call.respondText(
+                "Bad Request",
+                status = HttpStatusCode.BadRequest
+            )
+            val action = Action.valueOf(call.parameters["action"]!!.uppercase())
+            when (action) {
+                Action.CONVERT -> {
+                    val file = convertedFileDataSource.getFile(id)
+                    if (file == null) {
+                        call.respond(HttpStatusCode.BadRequest, "File does not exist!")
+                    } else {
+                        launch(Dispatchers.IO) {
+                            convertedFileDataSource.delete(id)
+                        }
+                        call.response.status(HttpStatusCode.OK)
+                        call.respond("$action: File with ID: $id deleted")
+                    }
+                }
+
+                Action.SLICE -> {
+                    val file = slicedFileDataSource.getFile(id)
+                    if (file == null) {
+                        call.respond(HttpStatusCode.BadRequest, "File does not exist!")
+                    } else {
+                        launch(Dispatchers.IO) {
+                            slicedFileDataSource.delete(id)
+                        }
+                        call.response.status(HttpStatusCode.OK)
+                        call.respond("$action: File with ID: $id deleted")
+                    }
+                }
+
+                Action.CONFIGURATION -> {
+                    val file = configurationFileDataSource.getFile(id)
+                    if (file == null) {
+                        call.respond(HttpStatusCode.BadRequest, "File does not exist!")
+                    } else {
+                        launch(Dispatchers.IO) {
+                            configurationFileDataSource.delete(id)
+                        }
+                        call.response.status(HttpStatusCode.OK)
+                        call.respond("$action: File with ID: $id deleted")
+                    }
+                }
+
+                Action.PROPAGATION -> {
+                    val file = propagationFileDataSource.getFile(id)
+                    if (file == null) {
+                        call.respond(HttpStatusCode.BadRequest, "File does not exist!")
+                    } else {
                         launch(Dispatchers.IO) {
                             propagationFileDataSource.delete(id)
                         }
                         call.response.status(HttpStatusCode.OK)
-                        call.respond(convertOutput)
+                        call.respond("$action: File with ID: $id deleted")
                     }
                 }
             }

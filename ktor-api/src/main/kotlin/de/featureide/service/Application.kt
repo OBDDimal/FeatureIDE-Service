@@ -14,9 +14,10 @@ fun main(args: Array<String>): Unit =
 fun Application.module() {
     DatabaseFactory.init(environment.config)
     configureSerialization()
-    configureRouting(environment.config)
+    configureRouting()
     install(CORS){
         anyHost()
+        allowMethod(HttpMethod.Delete)
         allowHeader(HttpHeaders.ContentType)
         exposeHeader(HttpHeaders.Location)
     }

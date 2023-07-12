@@ -4,6 +4,7 @@ import de.featureide.service.data.configurationFileDataSource
 import de.featureide.service.exceptions.CouldNotCreateFileException
 import de.featureide.service.exceptions.CouldNotCreateRequestException
 import de.featureide.service.models.ConfigurationInput
+import de.featureide.service.models.ConfigurationOutput
 import de.ovgu.featureide.fm.core.analysis.cnf.CNF
 import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet
 import de.ovgu.featureide.fm.core.analysis.cnf.SolutionList
@@ -92,9 +93,17 @@ object Configurator {
 
                         val result = generateSamples(cnf, t, limit, time, algorithm!!)
 
-                        println(fileFromList.nameWithoutExtension + ": " + result.size + " in " + Duration.between(start, LocalDateTime.now()).toString())
+                        println(
+                            fileFromList.nameWithoutExtension + ": " + result.size + " in " + Duration.between(
+                                start,
+                                LocalDateTime.now()
+                            ).toString()
+                        )
 
-                        sb.append(fileFromList.nameWithoutExtension+";"+Duration.between(start, LocalDateTime.now()).toString() + ";" + result.size + "\n")
+                        sb.append(
+                            fileFromList.nameWithoutExtension + ";" + Duration.between(start, LocalDateTime.now())
+                                .toString() + ";" + result.size + "\n"
+                        )
 
                         FileHandler.save(
                             Paths.get("${output}/${fileFromList.nameWithoutExtension}_${algorithm}_t${t}_${limit}.${ConfigurationListFormat().suffix}"),
@@ -139,64 +148,66 @@ object Configurator {
         LibraryManager.registerLibrary(FMCoreLibrary.getInstance())
     }
 
-    suspend fun generate(file: ConfigurationInput, id: Int) {
+    suspend fun generate(file: ConfigurationInput, id: Int): ConfigurationOutput {
+        val t = file.t
+        val limit = file.limit
+
+        val filePath = "files"
         withContext(Dispatchers.IO) {
-            val t = file.t
-            val limit = file.limit
-
-            val filePath = "files"
             Files.createDirectories(Paths.get(filePath))
-            val directory = File(filePath)
-
-            try {
-
-                directory.listFiles().forEach { it.delete() }
-
-                val localFile = File("$filePath/${file.name}")
-                localFile.writeText(String(file.content))
-
-                val model = FeatureModelManager.load(Paths.get(localFile.path))
-
-                val cnf = FeatureModelFormula(model).cnf
-
-                val result = generateSamples(cnf, t, limit, -1, file.algorithm)
-
-                val newName =
-                    "${localFile.nameWithoutExtension}_${file.algorithm}_t${file.t}_${limit}.${ConfigurationListFormat().suffix}"
-                val pathOutputFile = "$filePath/$newName"
-
-
-                FileHandler.save(
-                    Paths.get(pathOutputFile),
-                    SolutionList(cnf.getVariables(), result),
-                    ConfigurationListFormat()
-                )
-
-                val resultFile = File(pathOutputFile).absoluteFile
-                println(resultFile.readText())
-
-                configurationFileDataSource.update(
-                    id,
-                    name = newName,
-                    content = resultFile.readText(),
-                    algorithm = file.algorithm,
-                    t = file.t,
-                    limit = file.limit
-                )
-                localFile.delete()
-                resultFile.delete()
-
-            } catch (e: Exception) {
-                configurationFileDataSource.update(
-                    id,
-                    name = "Not generated",
-                    content = e.stackTraceToString(),
-                    algorithm = file.algorithm,
-                    t = file.t,
-                    limit = file.limit
-                )
-            }
         }
+        val directory = File(filePath)
+
+        try {
+
+            directory.listFiles()?.forEach { it.delete() }
+
+            val localFile = File("$filePath/${file.name}")
+            localFile.writeText(String(file.content))
+
+            val model = FeatureModelManager.load(Paths.get(localFile.path))
+
+            val cnf = FeatureModelFormula(model).cnf
+
+            val result = generateSamples(cnf, t, limit, -1, file.algorithm)
+
+            val newName =
+                "${localFile.nameWithoutExtension}_${file.algorithm}_t${file.t}_${limit}.${ConfigurationListFormat().suffix}"
+            val pathOutputFile = "$filePath/$newName"
+
+
+            FileHandler.save(
+                Paths.get(pathOutputFile),
+                SolutionList(cnf.getVariables(), result),
+                ConfigurationListFormat()
+            )
+
+            val resultFile = File(pathOutputFile).absoluteFile
+
+            val resultText = resultFile.readText()
+            configurationFileDataSource.update(
+                id,
+                name = newName,
+                content = resultText,
+                algorithm = file.algorithm,
+                t = file.t,
+                limit = file.limit
+            )
+            localFile.delete()
+            resultFile.delete()
+            return ConfigurationOutput(newName, file.algorithm, file.t, file.limit, resultText.toByteArray())
+
+        } catch (e: Exception) {
+            configurationFileDataSource.update(
+                id,
+                name = "Not generated",
+                content = e.stackTraceToString(),
+                algorithm = file.algorithm,
+                t = file.t,
+                limit = file.limit
+            )
+        }
+        return ConfigurationOutput(file.name, file.algorithm, file.t, file.limit, file.content)
     }
 
     /**
@@ -209,7 +220,7 @@ object Configurator {
      * @param algorithm The algorithm to generate the samples
      * @return List<LiteralSet> The samples as a list of literalset
      */
-    fun generateSamples(cnf: CNF, t: Int, limit: Int, time: Int, algorithm: String): List<LiteralSet>{
+    fun generateSamples(cnf: CNF, t: Int, limit: Int, time: Int, algorithm: String): List<LiteralSet> {
         var generator: IConfigurationGenerator? = null
         with(algorithm) {
             when {

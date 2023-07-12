@@ -4,6 +4,7 @@ import de.featureide.service.data.slicedFileDataSource
 import de.featureide.service.exceptions.CouldNotCreateFileException
 import de.featureide.service.exceptions.CouldNotCreateRequestException
 import de.featureide.service.models.SliceInput
+import de.featureide.service.models.SliceOutput
 import de.ovgu.featureide.fm.core.base.IFeature
 import de.ovgu.featureide.fm.core.base.IFeatureModel
 import de.ovgu.featureide.fm.core.init.FMCoreLibrary
@@ -32,8 +33,13 @@ object Slicer {
     fun main(args: Array<String>) {
         val parser = ArgParser("featureide-cli")
 
-        val path by parser.option(ArgType.String, shortName = "p", description = "Input path for file or directory.").required()
-        val selection by parser.option(ArgType.String, shortName = "s", description = "The names of the features that should be sliced separated by ','. For example: Antenna,AHEAD.")
+        val path by parser.option(ArgType.String, shortName = "p", description = "Input path for file or directory.")
+            .required()
+        val selection by parser.option(
+            ArgType.String,
+            shortName = "s",
+            description = "The names of the features that should be sliced separated by ','. For example: Antenna,AHEAD."
+        )
 
         parser.parse(args)
 
@@ -44,8 +50,8 @@ object Slicer {
         Files.createDirectories(Paths.get(output))
 
         //slices the featureModel
-        if (!selection.isNullOrEmpty()){
-            if(file.isDirectory() || !file.exists()) exitProcess(0)
+        if (!selection.isNullOrEmpty()) {
+            if (file.isDirectory() || !file.exists()) exitProcess(0)
             var model = FeatureModelManager.load(Paths.get(file.path))
             model = slice(model, selection!!.split(",").toTypedArray())
             saveFeatureModel(
@@ -62,53 +68,56 @@ object Slicer {
         LibraryManager.registerLibrary(FMCoreLibrary.getInstance())
     }
 
-    suspend fun slice(file: SliceInput, id: Int) {
+    suspend fun slice(file: SliceInput, id: Int): SliceOutput {
+
+        val filePath = "files"
         withContext(Dispatchers.IO) {
-
-            val filePath = "files"
             Files.createDirectories(Paths.get(filePath))
-            val directory = File(filePath)
-
-            try {
-                directory.listFiles().forEach { it.delete() }
-
-                val localFile = File("$filePath/${file.name}")
-                localFile.writeText(String(file.content))
-
-                val format: IPersistentFormat<IFeatureModel> = XmlFeatureModelFormat()
-
-                var model = FeatureModelManager.load(Paths.get(localFile.path))
-
-                model = slice(model, file.selection)
-
-                val newName = "${localFile.nameWithoutExtension}_sliced.${format.suffix}"
-                val pathOutputFile = "$filePath/$newName"
-
-                saveFeatureModel(
-                    model,
-                    pathOutputFile,
-                    format,
-                )
-
-                val result = File(pathOutputFile).absoluteFile
-                slicedFileDataSource.update(
-                    id,
-                    name = newName,
-                    content = result.readText(),
-                    featuresSliced = file.selection
-                )
-                localFile.delete()
-                result.delete()
-
-            } catch (e: Exception) {
-                slicedFileDataSource.update(
-                    id,
-                    name = "Not sliced",
-                    content = "Could not slice file",
-                    featuresSliced = file.selection
-                )
-            }
         }
+        val directory = File(filePath)
+
+        try {
+            directory.listFiles()?.forEach { it.delete() }
+
+            val localFile = File("$filePath/${file.name}")
+            localFile.writeText(String(file.content))
+
+            val format: IPersistentFormat<IFeatureModel> = XmlFeatureModelFormat()
+
+            var model = FeatureModelManager.load(Paths.get(localFile.path))
+
+            model = slice(model, file.selection)
+
+            val newName = "${localFile.nameWithoutExtension}_sliced.${format.suffix}"
+            val pathOutputFile = "$filePath/$newName"
+
+            saveFeatureModel(
+                model,
+                pathOutputFile,
+                format,
+            )
+
+            val result = File(pathOutputFile).absoluteFile
+            val resultText = result.readText()
+            slicedFileDataSource.update(
+                id,
+                name = newName,
+                content = resultText,
+                featuresSliced = file.selection
+            )
+            localFile.delete()
+            result.delete()
+            return SliceOutput(newName,file.selection, resultText.toByteArray())
+
+        } catch (e: Exception) {
+            slicedFileDataSource.update(
+                id,
+                name = "Not sliced",
+                content = "Could not slice file",
+                featuresSliced = file.selection
+            )
+        }
+        return SliceOutput(file.name, file.selection, file.content)
     }
 
     private fun saveFeatureModel(model: IFeatureModel?, savePath: String, format: IPersistentFormat<IFeatureModel>?) {

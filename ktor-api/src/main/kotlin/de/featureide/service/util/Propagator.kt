@@ -1,9 +1,8 @@
 package de.featureide.service.util
 
 import de.featureide.service.data.propagationFileDataSource
-import de.featureide.service.exceptions.CouldNotCreateFileException
-import de.featureide.service.exceptions.CouldNotCreateRequestException
 import de.featureide.service.models.PropagationInput
+import de.featureide.service.models.PropagationOutput
 import de.ovgu.featureide.fm.core.analysis.cnf.CNF
 import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet
 import de.ovgu.featureide.fm.core.analysis.cnf.analysis.CoreDeadAnalysis
@@ -19,7 +18,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
-import java.lang.NullPointerException
 import java.nio.file.Files
 import java.nio.file.Paths
 import kotlin.system.exitProcess
@@ -31,8 +29,13 @@ object Propagator {
     fun main(args: Array<String>) {
         val parser = ArgParser("featureide-cli")
 
-        val path by parser.option(ArgType.String, shortName = "p", description = "Input path for file or directory.").required()
-        val selection by parser.option(ArgType.String, shortName = "s", description = "The names of the features that are selected separated by ','. For example: Antenna,AHEAD.")
+        val path by parser.option(ArgType.String, shortName = "p", description = "Input path for file or directory.")
+            .required()
+        val selection by parser.option(
+            ArgType.String,
+            shortName = "s",
+            description = "The names of the features that are selected separated by ','. For example: Antenna,AHEAD."
+        )
 
         parser.parse(args)
 
@@ -42,8 +45,8 @@ object Propagator {
         Files.createDirectories(Paths.get(output))
 
         //Propagates the implied features
-        if (!selection.isNullOrEmpty()){
-            if(file.isDirectory() || !file.exists()) exitProcess(0)
+        if (!selection.isNullOrEmpty()) {
+            if (file.isDirectory() || !file.exists()) exitProcess(0)
             try {
                 val model = FeatureModelManager.load(Paths.get(file.path))
 
@@ -62,49 +65,50 @@ object Propagator {
             exitProcess(0)
         }
     }
+
     init {
         LibraryManager.registerLibrary(FMCoreLibrary.getInstance())
     }
 
-    suspend fun propagate(file: PropagationInput, id: Int) {
+    suspend fun propagate(file: PropagationInput, id: Int): PropagationOutput {
+        val filePath = "files"
         withContext(Dispatchers.IO) {
-
-            val filePath = "files"
             Files.createDirectories(Paths.get(filePath))
-            val directory = File(filePath)
-
-            try {
-
-                directory.listFiles().forEach { it.delete() }
-
-                val localFile = File("$filePath/${file.name}")
-                localFile.writeText(String(file.content))
-
-                val model = FeatureModelManager.load(Paths.get(localFile.path))
-
-                val cnf = FeatureModelFormula(model).cnf
-
-                val result = generateImpliedFeatures(file.selection, cnf)
-
-                propagationFileDataSource.update(
-                    id,
-                    name = file.name,
-                    content = String(file.content),
-                    selection = file.selection,
-                    impliedSelection = result.toTypedArray()
-                )
-                localFile.delete()
-
-            } catch (e: Exception){
-                propagationFileDataSource.update(
-                    id,
-                    name = "No Propagation",
-                    content = e.stackTraceToString(),
-                    selection = file.selection,
-                    impliedSelection = arrayOf("")
-                )
-            }
         }
+        val directory = File(filePath)
+
+        try {
+
+            directory.listFiles()?.forEach { it.delete() }
+
+            val localFile = File("$filePath/${file.name}")
+            localFile.writeText(String(file.content))
+
+            val model = FeatureModelManager.load(Paths.get(localFile.path))
+
+            val cnf = FeatureModelFormula(model).cnf
+
+            val result = generateImpliedFeatures(file.selection, cnf)
+
+            propagationFileDataSource.update(
+                id,
+                name = file.name,
+                content = String(file.content),
+                selection = file.selection,
+                impliedSelection = result.toTypedArray()
+            )
+            localFile.delete()
+            return PropagationOutput(file.name, file.selection, result.toTypedArray(), file.content)
+        } catch (e: Exception) {
+            propagationFileDataSource.update(
+                id,
+                name = "No Propagation",
+                content = e.stackTraceToString(),
+                selection = file.selection,
+                impliedSelection = arrayOf("")
+            )
+        }
+        return PropagationOutput(file.name, file.selection, arrayOf(""), file.content)
     }
 
 
@@ -119,7 +123,7 @@ object Propagator {
         val manualLiterals = ArrayList<Int>()
         for (feature in selection) {
             val featureInt = cnf.getVariables().getVariable(feature, true)
-            if(featureInt != 0)
+            if (featureInt != 0)
                 manualLiterals.add(
                     featureInt
                 )
@@ -133,7 +137,7 @@ object Propagator {
         }
         analysis.assumptions = LiteralSet(*intLiterals)
         val impliedFeatures = analysis.execute(NullMonitor())
-        for (feature in impliedFeatures.literals){
+        for (feature in impliedFeatures.literals) {
             result.add(cnf.variables.getName(feature))
         }
 
