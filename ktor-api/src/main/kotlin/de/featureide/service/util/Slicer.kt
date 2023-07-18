@@ -12,6 +12,8 @@ import de.ovgu.featureide.fm.core.init.LibraryManager
 import de.ovgu.featureide.fm.core.io.IPersistentFormat
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
 import de.ovgu.featureide.fm.core.io.xml.XmlFeatureModelFormat
+import de.ovgu.featureide.fm.core.job.LongRunningMethod
+import de.ovgu.featureide.fm.core.job.LongRunningWrapper
 import de.ovgu.featureide.fm.core.job.SliceFeatureModel
 import de.ovgu.featureide.fm.core.job.monitor.NullMonitor
 import kotlinx.cli.ArgParser
@@ -143,11 +145,7 @@ object Slicer {
             Collectors.toSet()
         )
         val sliceJob = SliceFeatureModel(featureModel, featureNamesToKeep, false)
-        return try {
-            sliceJob.execute(NullMonitor())
-        } catch (e: Exception) {
-            throw e
-        }
+        return LongRunningWrapper.runMethod(sliceJob)
     }
 }
 

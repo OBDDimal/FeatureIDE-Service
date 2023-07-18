@@ -16,6 +16,7 @@ import de.ovgu.featureide.fm.core.init.LibraryManager
 import de.ovgu.featureide.fm.core.io.csv.ConfigurationListFormat
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
 import de.ovgu.featureide.fm.core.io.manager.FileHandler
+import de.ovgu.featureide.fm.core.job.LongRunningWrapper
 import de.ovgu.featureide.fm.core.job.monitor.ConsoleMonitor
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
@@ -266,7 +267,7 @@ object Configurator {
         var result = ArrayList<LiteralSet>()
         if (generator is TWiseConfigurationGenerator? && time != -1) {
             GlobalScope.launch(Dispatchers.IO) {
-                result = ArrayList(generator!!.execute(monitor))
+                result = ArrayList(LongRunningWrapper.runMethod(generator,monitor))
             }
 
             val yasa = generator as TWiseConfigurationGenerator?
@@ -285,7 +286,7 @@ object Configurator {
                 }
             }
         } else {
-            result = ArrayList(generator!!.execute(monitor))
+            result = ArrayList(LongRunningWrapper.runMethod(generator,monitor))
         }
         return result
     }
