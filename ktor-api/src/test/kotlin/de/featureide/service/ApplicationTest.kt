@@ -28,15 +28,33 @@ class ApplicationTest {
         }
     }
 
+
     @Test
-    fun noRequest() = testApplication {
+    fun wrongGetRequest() = testApplication {
+        environment {
+            config = ApplicationConfig(configPath)
+        }
+        client.get("/hello").apply {
+            assertEquals(HttpStatusCode.NotFound, status)
+        }
+    }
+
+    @Test
+    fun wrongPostRequest() = testApplication {
+        environment {
+            config = ApplicationConfig(configPath)
+        }
+        client.post("/hello").apply {
+            assertEquals(HttpStatusCode.BadRequest, status)
+        }
+    }
+
+    @Test
+    fun fileNotFoundRequest() = testApplication {
         environment {
             config = ApplicationConfig(configPath)
         }
         client.get("/convert/-1").apply {
-            assertEquals(HttpStatusCode.BadRequest, status)
-        }
-        client.get("/slice/-1").apply {
             assertEquals(HttpStatusCode.BadRequest, status)
         }
     }

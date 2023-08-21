@@ -64,6 +64,7 @@ dependencies {
     implementation("io.ktor:ktor-server-status-pages-jvm:$ktor_version")
     implementation("ch.qos.logback:logback-classic:$logback_version")
     testImplementation("io.ktor:ktor-server-tests-jvm:$ktor_version")
+    implementation("io.ktor:ktor-server-cors:$ktor_version")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
     implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
     implementation("com.zaxxer:HikariCP:$hikaricp_version")
