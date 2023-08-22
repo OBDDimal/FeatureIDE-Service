@@ -1,8 +1,6 @@
 package de.featureide.service.models
 
-import kotlinx.serialization.Serializable
-
-@Serializable
+@kotlinx.serialization.Serializable
 data class ConvertOutput(
     val name: Array<String>,
     val typeOutput: Array<String>,

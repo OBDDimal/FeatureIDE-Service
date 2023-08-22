@@ -4,5 +4,6 @@ enum class Action {
     CONVERT,
     CONFIGURATION,
     PROPAGATION,
-    SLICE
+    SLICE,
+    STATS
 }

@@ -25,6 +25,7 @@ object DatabaseFactory {
             SchemaUtils.create(ConvertedFiles)
             SchemaUtils.create(ConfigurationFiles)
             SchemaUtils.create(PropagationFiles)
+            SchemaUtils.create(FeatureModelStatFiles)
         }
     }
 

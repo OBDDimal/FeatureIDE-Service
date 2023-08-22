@@ -58,6 +58,12 @@ fun Application.configureRouting() {
                         id = addFile(action)
                         result = Propagator.propagate(file, id)
                     }
+
+                    Action.STATS -> {
+                        val file = call.receive<FeatureModelStatInput>()
+                        id = addFile(action)
+                        result = FeatureStats.stats(file, id)
+                    }
                 }
                 if (id != -1) {
                     call.response.created(id)
