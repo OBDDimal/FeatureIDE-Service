@@ -163,6 +163,21 @@ fun Application.configureRouting() {
                         call.respond(convertOutput)
                     }
                 }
+
+                Action.STATS -> {
+                    val file = propagationFileDataSource.getFile(id)
+                    val results = propagationFileDataSource.isReady(id)
+                    if (file == null) {
+                        call.respond(HttpStatusCode.BadRequest, "File does not exist!")
+                    } else if (results) {
+                        call.respond(HttpStatusCode.Accepted, "File is not ready yet!")
+                    } else {
+                        val outputFile = propagationFileDataSource.getFile(id)
+                        val convertOutput = PropagationOutput(outputFile!!)
+                        call.response.status(HttpStatusCode.OK)
+                        call.respond(convertOutput)
+                    }
+                }
             }
         }
 
@@ -224,6 +239,19 @@ fun Application.configureRouting() {
                         call.respond("$action: File with ID: $id deleted")
                     }
                 }
+
+                Action.STATS -> {
+                    val file = propagationFileDataSource.getFile(id)
+                    if (file == null) {
+                        call.respond(HttpStatusCode.BadRequest, "File does not exist!")
+                    } else {
+                        launch(Dispatchers.IO) {
+                            propagationFileDataSource.delete(id)
+                        }
+                        call.response.status(HttpStatusCode.OK)
+                        call.respond("$action: File with ID: $id deleted")
+                    }
+                }
             }
         }
     }
@@ -252,6 +280,11 @@ suspend fun addFile(action: Action): Int {
 
         Action.PROPAGATION -> {
             val id = propagationFileDataSource.addFile()?.id
+            return id ?: throw Exception()
+        }
+
+        Action.STATS -> {
+            val id = featureModelStatFileDataSource.addFile()?.id
             return id ?: throw Exception()
         }
     }
