@@ -42,6 +42,8 @@ application {
             mainClass.set("de.featureide.service.util.Slicer")
         } else if (project.property("cli")!!.equals("prop")) {
             mainClass.set("de.featureide.service.util.Propagator")
+        } else if (project.property("cli")!!.equals("stat")) {
+            mainClass.set("de.featureide.service.util.FeatureStats")
         }
     } else {
         mainClass.set("io.ktor.server.netty.EngineMain")

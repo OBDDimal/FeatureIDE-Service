@@ -165,17 +165,17 @@ fun Application.configureRouting() {
                 }
 
                 Action.STATS -> {
-                    val file = propagationFileDataSource.getFile(id)
-                    val results = propagationFileDataSource.isReady(id)
+                    val file = featureModelStatFileDataSource.getFile(id)
+                    val results = featureModelStatFileDataSource.isReady(id)
                     if (file == null) {
                         call.respond(HttpStatusCode.BadRequest, "File does not exist!")
                     } else if (results) {
                         call.respond(HttpStatusCode.Accepted, "File is not ready yet!")
                     } else {
-                        val outputFile = propagationFileDataSource.getFile(id)
-                        val convertOutput = PropagationOutput(outputFile!!)
+                        val outputFile = featureModelStatFileDataSource.getFile(id)
+                        val statOutput = FeatureModelStatOutput(outputFile!!)
                         call.response.status(HttpStatusCode.OK)
-                        call.respond(convertOutput)
+                        call.respond(statOutput)
                     }
                 }
             }
@@ -241,12 +241,12 @@ fun Application.configureRouting() {
                 }
 
                 Action.STATS -> {
-                    val file = propagationFileDataSource.getFile(id)
+                    val file = featureModelStatFileDataSource.getFile(id)
                     if (file == null) {
                         call.respond(HttpStatusCode.BadRequest, "File does not exist!")
                     } else {
                         launch(Dispatchers.IO) {
-                            propagationFileDataSource.delete(id)
+                            featureModelStatFileDataSource.delete(id)
                         }
                         call.response.status(HttpStatusCode.OK)
                         call.respond("$action: File with ID: $id deleted")

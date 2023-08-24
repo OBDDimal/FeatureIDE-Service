@@ -1,6 +1,21 @@
 package de.featureide.service.models
+
 @kotlinx.serialization.Serializable
-data class FeatureModelStatOutput(val name: String, val content: ByteArray, val deadFeatures: Array<String>, val falseOptionalFeatures: Array<String>, val coreFeatures: Array<String>) {
+data class FeatureModelStatOutput(
+    val name: String,
+    val content: ByteArray,
+    val deadFeatures: Array<String>,
+    val falseOptionalFeatures: Array<String>,
+    val coreFeatures: Array<String>
+) {
+    constructor(file: FeatureModelStatFile) : this(
+        name = file.name,
+        content = file.content.toByteArray(),
+        deadFeatures = file.deadFeatures,
+        falseOptionalFeatures = file.falseOptionalFeatures,
+        coreFeatures = file.coreFeatures
+    )
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
