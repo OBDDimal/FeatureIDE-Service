@@ -91,20 +91,22 @@ object FeatureStats {
 
             val featureModelAnalyzer = FeatureModelAnalyzer(model)
 
-            val deadFeatures = featureModelAnalyzer.getDeadFeatures(NullMonitor())
-            val falseOptionalFeatures = featureModelAnalyzer.getFalseOptionalFeatures(NullMonitor())
-            val coreFeatures = featureModelAnalyzer.getCoreFeatures(NullMonitor())
+            val deadFeatures = featureModelAnalyzer.getDeadFeatures(NullMonitor()).map { iFeature -> iFeature.name }.toTypedArray()
+            val falseOptionalFeatures = featureModelAnalyzer.getFalseOptionalFeatures(NullMonitor()).map { iFeature -> iFeature.name }.toTypedArray()
+            val coreFeatures = featureModelAnalyzer.getCoreFeatures(NullMonitor()).map { iFeature -> iFeature.name }.toTypedArray()
 
 
             featureModelStatFileDataSource.update(
                 id,
                 name = file.name,
                 content = String(file.content),
-                deadFeatures = deadFeatures.map { iFeature -> iFeature.name }.toTypedArray(),
-                falseOptionalFeatures = falseOptionalFeatures.map { iFeature -> iFeature.name }.toTypedArray(),
-                coreFeatures = coreFeatures.map { iFeature -> iFeature.name }.toTypedArray()
+                deadFeatures = deadFeatures,
+                falseOptionalFeatures = falseOptionalFeatures,
+                coreFeatures = coreFeatures
             )
             localFile.delete()
+
+            return FeatureModelStatOutput(file.name, file.content, deadFeatures, falseOptionalFeatures, coreFeatures)
 
         } catch (e: Exception) {
             featureModelStatFileDataSource.update(
