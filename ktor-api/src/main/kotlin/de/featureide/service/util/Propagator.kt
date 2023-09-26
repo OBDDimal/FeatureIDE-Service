@@ -7,6 +7,7 @@ import de.ovgu.featureide.fm.core.analysis.cnf.CNF
 import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet
 import de.ovgu.featureide.fm.core.analysis.cnf.analysis.CoreDeadAnalysis
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula
+import de.ovgu.featureide.fm.core.configuration.Configuration
 import de.ovgu.featureide.fm.core.init.FMCoreLibrary
 import de.ovgu.featureide.fm.core.init.LibraryManager
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
@@ -36,6 +37,11 @@ object Propagator {
             shortName = "s",
             description = "The names of the features that are selected separated by ','. For example: Antenna,AHEAD."
         )
+        val deselection by parser.option(
+            ArgType.String,
+            shortName = "ds",
+            description = "The names of the features that are deselected separated by ','. For example: Antenna,AHEAD."
+        )
 
         parser.parse(args)
 
@@ -50,14 +56,13 @@ object Propagator {
             try {
                 val model = FeatureModelManager.load(Paths.get(file.path))
 
-                val cnf = FeatureModelFormula(model).cnf
+                val formula = FeatureModelFormula(model)
 
-                val result = generateImpliedFeatures(selection!!.split(",").toTypedArray(), cnf)
+                val result = generateImpliedFeatures(selection!!.split(",").toTypedArray(), arrayOf(""), formula)
 
                 val localFile = File("${output}/${file.nameWithoutExtension}_ImpliedFeatures.txt")
-                localFile.writeText(result.joinToString())
-            } catch (e: NullPointerException) {
-                println("Could not convert file, because file could not be converted to a feature model.")
+                localFile.writeText(result.selectedFeatureNames.joinToString())
+                localFile.writeText(result.unselectedFeatureNames.joinToString())
             } catch (e: Exception) {
                 println(e.stackTraceToString())
             }
@@ -86,31 +91,39 @@ object Propagator {
 
             val model = FeatureModelManager.load(Paths.get(localFile.path))
 
-            val cnf = FeatureModelFormula(model).cnf
+            val formula = FeatureModelFormula(model)
 
-            val result = generateImpliedFeatures(file.selection, cnf)
+            val configuration = generateImpliedFeatures(file.selection, file.deselection, formula)
+
+            val satCount = 0
 
             propagationFileDataSource.update(
                 id,
                 name = file.name,
                 content = String(file.content),
+                satCount = satCount,
                 selection = file.selection,
-                impliedSelection = result.toTypedArray()
+                impliedSelection = configuration.selectedFeatureNames.toTypedArray(),
+                deselection = file.deselection,
+                impliedDeselection = configuration.unselectedFeatureNames.toTypedArray()
             )
             localFile.delete()
-            return PropagationOutput(file.name, file.selection, result.toTypedArray(), file.content)
+            return PropagationOutput(name = file.name, satCount = satCount, selection = file.selection, deselection = file.deselection,
+                impliedSelection = configuration.selectedFeatureNames.toTypedArray(), impliedDeselection = configuration.unselectedFeatureNames.toTypedArray(), content = file.content)
         } catch (e: Exception) {
             propagationFileDataSource.update(
                 id,
                 name = "No Propagation",
                 content = e.stackTraceToString(),
                 selection = file.selection,
-                impliedSelection = arrayOf("")
+                impliedSelection = arrayOf(""),
+                satCount = 0,
+                deselection = file.deselection,
+                impliedDeselection = arrayOf("")
             )
         }
-        return PropagationOutput(file.name, file.selection, arrayOf(""), file.content)
+        return PropagationOutput(file.name, 0, file.selection, arrayOf(""), file.deselection, arrayOf(""), file.content)
     }
-
 
     /**
      * Generate implied features from a cnf with a selection of features
@@ -119,28 +132,30 @@ object Propagator {
      * @param selection The selection of features to get the implied features
      * @return List<String> The samples as a list of literalset
      */
-    fun generateImpliedFeatures(selection: Array<String>, cnf: CNF): List<String> {
+    fun generateImpliedFeatures(selection: Array<String>, deselection: Array<String>, formula: FeatureModelFormula): Configuration {
         val manualLiterals = ArrayList<Int>()
         for (feature in selection) {
-            val featureInt = cnf.getVariables().getVariable(feature, true)
+            val featureInt = formula.cnf.getVariables().getVariable(feature, true)
             if (featureInt != 0)
                 manualLiterals.add(
                     featureInt
                 )
         }
-        val result = ArrayList<String>()
+        for (feature in deselection) {
+            val featureInt = formula.cnf.getVariables().getVariable(feature, false)
+            if (featureInt != 0)
+                manualLiterals.add(
+                    featureInt
+                )
+        }
 
-        val analysis = CoreDeadAnalysis(cnf)
+        val analysis = CoreDeadAnalysis(formula.cnf)
         val intLiterals = IntArray(selection.size)
         for (i in intLiterals.indices) {
             intLiterals[i] = manualLiterals.get(i)
         }
         analysis.assumptions = LiteralSet(*intLiterals)
         val impliedFeatures = analysis.execute(NullMonitor())
-        for (feature in impliedFeatures.literals) {
-            result.add(cnf.variables.getName(feature))
-        }
-
-        return result
+        return Configuration.fromLiteralSet(formula, impliedFeatures)
     }
 }
