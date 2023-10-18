@@ -150,12 +150,19 @@ object Propagator {
         }
 
         val analysis = CoreDeadAnalysis(formula.cnf)
-        val intLiterals = IntArray(selection.size)
+        val intLiterals = IntArray(manualLiterals.size)
         for (i in intLiterals.indices) {
             intLiterals[i] = manualLiterals.get(i)
         }
         analysis.assumptions = LiteralSet(*intLiterals)
         val impliedFeatures = analysis.execute(NullMonitor())
+
+        for(feature in impliedFeatures.literals){
+            println(feature)
+            println(formula.cnf.variables.getName(feature))
+        }
+
+
         return Configuration.fromLiteralSet(formula, impliedFeatures)
     }
 }
