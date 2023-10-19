@@ -8,9 +8,12 @@ import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet
 import de.ovgu.featureide.fm.core.analysis.cnf.analysis.CoreDeadAnalysis
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula
 import de.ovgu.featureide.fm.core.configuration.Configuration
+import de.ovgu.featureide.fm.core.configuration.ConfigurationPropagator
+import de.ovgu.featureide.fm.core.configuration.SelectableFeature
 import de.ovgu.featureide.fm.core.init.FMCoreLibrary
 import de.ovgu.featureide.fm.core.init.LibraryManager
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
+import de.ovgu.featureide.fm.core.job.LongRunningWrapper
 import de.ovgu.featureide.fm.core.job.monitor.NullMonitor
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
@@ -95,6 +98,14 @@ object Propagator {
 
             val configuration = generateImpliedFeatures(file.selection, file.deselection, formula)
 
+            val openClauses = generateOpenClauses(configuration, formula)
+
+            println(openClauses)
+
+            for (feature in openClauses){
+                println(feature)
+            }
+
             val satCount = 0
 
             propagationFileDataSource.update(
@@ -155,14 +166,14 @@ object Propagator {
             intLiterals[i] = manualLiterals.get(i)
         }
         analysis.assumptions = LiteralSet(*intLiterals)
-        val impliedFeatures = analysis.execute(NullMonitor())
-
-        for(feature in impliedFeatures.literals){
-            println(feature)
-            println(formula.cnf.variables.getName(feature))
-        }
-
+        val impliedFeatures = LongRunningWrapper.runMethod(analysis)
 
         return Configuration.fromLiteralSet(formula, impliedFeatures)
+    }
+
+    fun generateOpenClauses(configuration: Configuration, formula: FeatureModelFormula): Collection<SelectableFeature> {
+        val dp = ConfigurationPropagator(formula, configuration)
+
+        return LongRunningWrapper.runMethod(dp.FindOpenClauses())
     }
 }
