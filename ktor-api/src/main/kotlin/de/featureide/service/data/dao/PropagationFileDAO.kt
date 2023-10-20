@@ -15,9 +15,10 @@ interface PropagationFileDAO {
     suspend fun update(id: Int,
                        name: String,
                        content: String,
-                       satCount: Int,
                        selection: Array<String>,
                        impliedSelection: Array<String>,
                        deselection: Array<String>,
-                       impliedDeselection: Array<String>,): Boolean
+                       impliedDeselection: Array<String>,
+                       openParents: Array<String>,
+                       openChildren: Array<String>,): Boolean
 }

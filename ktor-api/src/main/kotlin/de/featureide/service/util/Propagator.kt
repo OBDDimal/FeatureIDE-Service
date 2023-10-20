@@ -10,6 +10,7 @@ import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula
 import de.ovgu.featureide.fm.core.configuration.Configuration
 import de.ovgu.featureide.fm.core.configuration.ConfigurationPropagator
 import de.ovgu.featureide.fm.core.configuration.SelectableFeature
+import de.ovgu.featureide.fm.core.configuration.Selection
 import de.ovgu.featureide.fm.core.init.FMCoreLibrary
 import de.ovgu.featureide.fm.core.init.LibraryManager
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
@@ -98,29 +99,36 @@ object Propagator {
 
             val configuration = generateImpliedFeatures(file.selection, file.deselection, formula)
 
-            val openClauses = generateOpenClauses(configuration, formula)
+            val openClauses = generateOpenClauses(selection = file.selection, deselection = file.deselection, configuration, formula)
 
-            println(openClauses)
+            val openParents = ArrayList<String>()
+
+            val openChildren = ArrayList<String>()
 
             for (feature in openClauses){
-                println(feature)
+                if (feature.recommended == Selection.SELECTED){
+                    openChildren.add(feature.name)
+                } else {
+                    openParents.add(feature.name)
+                }
             }
-
-            val satCount = 0
 
             propagationFileDataSource.update(
                 id,
                 name = file.name,
                 content = String(file.content),
-                satCount = satCount,
                 selection = file.selection,
                 impliedSelection = configuration.selectedFeatureNames.toTypedArray(),
                 deselection = file.deselection,
-                impliedDeselection = configuration.unselectedFeatureNames.toTypedArray()
+                impliedDeselection = configuration.unselectedFeatureNames.toTypedArray(),
+                openParents = openParents.toTypedArray(),
+                openChildren = openChildren.toTypedArray()
             )
             localFile.delete()
-            return PropagationOutput(name = file.name, satCount = satCount, selection = file.selection, deselection = file.deselection,
-                impliedSelection = configuration.selectedFeatureNames.toTypedArray(), impliedDeselection = configuration.unselectedFeatureNames.toTypedArray(), content = file.content)
+            return PropagationOutput(name = file.name, selection = file.selection, deselection = file.deselection,
+                impliedSelection = configuration.selectedFeatureNames.toTypedArray(), impliedDeselection = configuration.unselectedFeatureNames.toTypedArray(),
+                openParents = openParents.toTypedArray(), openChildren = openChildren.toTypedArray(),
+                content = file.content)
         } catch (e: Exception) {
             propagationFileDataSource.update(
                 id,
@@ -128,12 +136,13 @@ object Propagator {
                 content = e.stackTraceToString(),
                 selection = file.selection,
                 impliedSelection = arrayOf(""),
-                satCount = 0,
                 deselection = file.deselection,
-                impliedDeselection = arrayOf("")
+                impliedDeselection = arrayOf(""),
+                openParents = arrayOf(""),
+                openChildren = arrayOf("")
             )
         }
-        return PropagationOutput(file.name, 0, file.selection, arrayOf(""), file.deselection, arrayOf(""), file.content)
+        return PropagationOutput(file.name, file.selection, arrayOf(""), file.deselection, arrayOf(""), arrayOf(""), arrayOf(""), file.content)
     }
 
     /**
@@ -143,7 +152,7 @@ object Propagator {
      * @param selection The selection of features to get the implied features
      * @return List<String> The samples as a list of literalset
      */
-    fun generateImpliedFeatures(selection: Array<String>, deselection: Array<String>, formula: FeatureModelFormula): Configuration {
+    private fun generateImpliedFeatures(selection: Array<String>, deselection: Array<String>, formula: FeatureModelFormula): Configuration {
         val manualLiterals = ArrayList<Int>()
         for (feature in selection) {
             val featureInt = formula.cnf.getVariables().getVariable(feature, true)
@@ -171,8 +180,16 @@ object Propagator {
         return Configuration.fromLiteralSet(formula, impliedFeatures)
     }
 
-    fun generateOpenClauses(configuration: Configuration, formula: FeatureModelFormula): Collection<SelectableFeature> {
-        val dp = ConfigurationPropagator(formula, configuration)
+    private fun generateOpenClauses(selection: Array<String>, deselection: Array<String>, configuration: Configuration, formula: FeatureModelFormula): Collection<SelectableFeature> {
+        val fullConfiguration = Configuration(configuration, formula)
+        for (feature in selection) {
+            fullConfiguration.setManual(feature, Selection.SELECTED)
+        }
+        for (feature in deselection) {
+            fullConfiguration.setManual(feature, Selection.UNSELECTED)
+        }
+
+        val dp = ConfigurationPropagator(formula, fullConfiguration)
 
         return LongRunningWrapper.runMethod(dp.FindOpenClauses())
     }
