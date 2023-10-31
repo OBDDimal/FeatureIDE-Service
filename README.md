@@ -151,6 +151,7 @@ The content of the HTTP POST need to be the following.
 #### Input
 * name: String - The name of the featuremodel
 * selection: Array\<String> - The features that are selected
+* deselection: Array\<String> - The features that are deselected
 * content: Array\<Byte> - The content of the featuremodel
 
 After this you receive a HTTP Message with the content "Request Accepted" and a Location header to now receive your converted file/s make a HTTP GET Request until you receive the HTTP STATUS OK.
@@ -159,7 +160,11 @@ The content of the message will be following:
 #### Output
 * name: String - The name of the featuremodel
 * selection: Array\<String> - The features that are selected
-* impliedSelection: Array\<String> - The features that need to be selected because of the first selection
+* deselection: Array\<String> - The features that are deselected
+* impliedSelection: Array\<String> - The features that need to be selected because of the first selection/deselection
+* impliedDeselection: Array\<String> - The features that need to be deselected because of the first selection/deselection
+* openParents: Array\<String> - The features where the selection/deselection led to open children
+* openChildren: Array\<String> - The features where one of the features needs to be selected to have a valid configuration
 * content: Array\<Byte> - The content of the featuremodel
 
 
