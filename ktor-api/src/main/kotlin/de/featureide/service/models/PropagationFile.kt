@@ -12,6 +12,7 @@ data class PropagationFile(
     val impliedDeselection: Array<String>,
     val openParents: Array<String>,
     val openChildren: Array<String>,
+    val valid: Boolean,
     val content: String,
 )
 
@@ -24,6 +25,7 @@ object PropagationFiles : Table() {
     val impliedDeselection = text("impliedDeselection")
     val openParents = text("openParents")
     val openChildren = text("openChildren")
+    val valid = bool("valid")
     val content = text("content")
 
     override val primaryKey = PrimaryKey(id)

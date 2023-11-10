@@ -20,7 +20,8 @@ class PropagationFileDataSource : PropagationFileDAO {
         deselection = row[PropagationFiles.deselection].split(":::").toTypedArray(),
         impliedDeselection = row[PropagationFiles.impliedDeselection].split(":::").toTypedArray(),
         openParents = row[PropagationFiles.openParents].split(":::").toTypedArray(),
-        openChildren = row[PropagationFiles.openChildren].split(":::").toTypedArray()
+        openChildren = row[PropagationFiles.openChildren].split(":::").toTypedArray(),
+        valid = row[PropagationFiles.valid]
     )
 
     override suspend fun getFile(id: Int): PropagationFile? = DatabaseFactory.dbQuery {
@@ -37,6 +38,7 @@ class PropagationFileDataSource : PropagationFileDAO {
             it[impliedDeselection] = ""
             it[openParents] = ""
             it[openChildren] = ""
+            it[valid] = false
         }
 
         insert.resultedValues?.singleOrNull()?.let(::resultRowToFile)
@@ -61,6 +63,7 @@ class PropagationFileDataSource : PropagationFileDAO {
         impliedDeselection: Array<String>,
         openParents: Array<String>,
         openChildren: Array<String>,
+        valid: Boolean
     ): Boolean = DatabaseFactory.dbQuery {
         PropagationFiles.update({ PropagationFiles.id eq id }) {
             it[PropagationFiles.name] = name
@@ -71,6 +74,7 @@ class PropagationFileDataSource : PropagationFileDAO {
             it[PropagationFiles.impliedDeselection] = impliedDeselection.joinToString(":::")
             it[PropagationFiles.openParents] = openParents.joinToString(":::")
             it[PropagationFiles.openChildren] = openChildren.joinToString(":::")
+            it[PropagationFiles.valid] = valid
         } > 0
     }
 

@@ -97,6 +97,8 @@ object Propagator {
 
             val formula = FeatureModelFormula(model)
 
+            val isValid = isValidMethod(file.selection, file.deselection, formula)
+
             val configuration = generateImpliedFeatures(file.selection, file.deselection, formula)
 
             val openClauses = generateOpenClauses(selection = file.selection, deselection = file.deselection, configuration, formula)
@@ -122,12 +124,13 @@ object Propagator {
                 deselection = file.deselection,
                 impliedDeselection = configuration.unselectedFeatureNames.toTypedArray(),
                 openParents = openParents.toTypedArray(),
-                openChildren = openChildren.toTypedArray()
+                openChildren = openChildren.toTypedArray(),
+                valid = isValid
             )
             localFile.delete()
             return PropagationOutput(name = file.name, selection = file.selection, deselection = file.deselection,
                 impliedSelection = configuration.selectedFeatureNames.toTypedArray(), impliedDeselection = configuration.unselectedFeatureNames.toTypedArray(),
-                openParents = openParents.toTypedArray(), openChildren = openChildren.toTypedArray(),
+                openParents = openParents.toTypedArray(), openChildren = openChildren.toTypedArray(), valid = isValid,
                 content = file.content)
         } catch (e: Exception) {
             propagationFileDataSource.update(
@@ -139,10 +142,11 @@ object Propagator {
                 deselection = file.deselection,
                 impliedDeselection = arrayOf(""),
                 openParents = arrayOf(""),
-                openChildren = arrayOf("")
+                openChildren = arrayOf(""),
+                valid = false
             )
         }
-        return PropagationOutput(file.name, file.selection, arrayOf(""), file.deselection, arrayOf(""), arrayOf(""), arrayOf(""), file.content)
+        return PropagationOutput(file.name, file.selection, arrayOf(""), file.deselection, arrayOf(""), arrayOf(""), arrayOf(""),false, file.content)
     }
 
     /**
@@ -192,5 +196,19 @@ object Propagator {
         val dp = ConfigurationPropagator(formula, fullConfiguration)
 
         return LongRunningWrapper.runMethod(dp.FindOpenClauses())
+    }
+
+    private fun isValidMethod(selection: Array<String>, deselection: Array<String>,  formula: FeatureModelFormula): Boolean{
+        val configuration = Configuration(formula)
+        for (feature in selection) {
+            configuration.setManual(feature, Selection.SELECTED)
+        }
+        for (feature in deselection) {
+            configuration.setManual(feature, Selection.UNSELECTED)
+        }
+
+        val dp = ConfigurationPropagator(formula, configuration)
+
+        return LongRunningWrapper.runMethod(dp.isValid)
     }
 }

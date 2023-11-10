@@ -20,5 +20,6 @@ interface PropagationFileDAO {
                        deselection: Array<String>,
                        impliedDeselection: Array<String>,
                        openParents: Array<String>,
-                       openChildren: Array<String>,): Boolean
+                       openChildren: Array<String>,
+                       valid: Boolean): Boolean
 }

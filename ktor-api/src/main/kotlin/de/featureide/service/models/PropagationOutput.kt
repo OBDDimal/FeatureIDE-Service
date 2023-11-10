@@ -3,11 +3,11 @@ package de.featureide.service.models
 @kotlinx.serialization.Serializable
 data class PropagationOutput(val name: String, val selection: Array<String>, val deselection: Array<String>,
                              val impliedSelection: Array<String>, val impliedDeselection: Array<String>,
-                             val openParents: Array<String>, val openChildren: Array<String>, val content: ByteArray) {
+                             val openParents: Array<String>, val openChildren: Array<String>, val valid: Boolean, val content: ByteArray) {
     constructor(file: PropagationFile) : this(name = file.name,
         selection = file.selection, impliedSelection = file.impliedSelection,
         deselection = file.deselection, impliedDeselection = file.impliedDeselection,
-        openParents = file.openParents, openChildren = file.openChildren,
+        openParents = file.openParents, openChildren = file.openChildren, valid = file.valid,
         content = file.content.toByteArray())
 
     override fun equals(other: Any?): Boolean {
