@@ -22,5 +22,3 @@ fun Application.module() {
         exposeHeader(HttpHeaders.Location)
     }
 }
-
-

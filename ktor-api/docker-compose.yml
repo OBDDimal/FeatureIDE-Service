@@ -1,12 +1,22 @@
 version: "3.3"
 
 services:
-  web:
+  featureide:
     build:
       context: .
       dockerfile: ./Dockerfile
+
     environment:
       PORT: 10000
       JDBC_URL: "jdbc:sqlite:file:test?mode=memory&cache=shared"
-    ports:
-      - "10000:10000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.featureide.rule=Host(`featureide.localhost`)"
+      - "traefik.http.routers.featureide.entrypoints=web"
+      - "traefik.http.services.featureide.loadbalancer.server.port=10000"
+    networks:
+      - vdev
+
+networks:
+  vdev:
+    external: true
