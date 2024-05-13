@@ -7,10 +7,9 @@ val exposed_version: String by project
 val postgresql_version: String by project
 val hikaricp_version: String by project
 
-val featureide_version: String = "v3.9.3"
-// val featureide_jar_url: String = "https://github.com/FeatureIDE/FeatureIDE/releases/download/${featureide_version}/de.ovgu.featureide.lib.fm-${featureide_version}.jar"
+val featureide_version: String = "v3.11.1"
 
-val featureide_jar_url: String = "https://cloudstore.uni-ulm.de/s/MSbQTWysaAnH2pS/download/de.ovgu.featureide.lib.fm-v3.9.3_new.jar"
+val featureide_jar_url: String = "https://github.com/FeatureIDE/FeatureIDE/releases/download/${featureide_version}/de.ovgu.featureide.lib.fm-${featureide_version}.jar"
 val antlr_jar_url: String = "https://github.com/FeatureIDE/FeatureIDE/raw/${featureide_version}/plugins/de.ovgu.featureide.fm.core/lib/antlr-3.4.jar"
 val sat4j_jar_url: String = "https://github.com/FeatureIDE/FeatureIDE/raw/${featureide_version}/plugins/de.ovgu.featureide.fm.core/lib/org.sat4j.core.jar"
 val uvl_jar_url: String = "https://github.com/FeatureIDE/FeatureIDE/raw/${featureide_version}/plugins/de.ovgu.featureide.fm.core/lib/uvl-parser.jar"
@@ -80,7 +79,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.1")
 
-    implementation(files("lib/de.ovgu.featureide.lib.fm-v3.9.3_new.jar"))
+    implementation(files("lib/de.ovgu.featureide.lib.fm-$featureide_version.jar"))
     implementation(files("lib/org.sat4j.core.jar"))
     implementation(files("lib/antlr-3.4.jar"))
     implementation(files("lib/uvl-parser.jar"))
