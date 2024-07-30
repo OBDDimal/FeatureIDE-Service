@@ -36,148 +36,93 @@ object CommonalityLookOut {
         val outputCSV = "./files/outputCSV"
         Files.createDirectories(Path.of(output))
         Files.createDirectories(Path.of(outputCSV))
+        File(output).listFiles()?.forEach { it.delete() }
+        File(outputCSV).listFiles()?.forEach { it.delete() }
 
         if (file.isDirectory()) {
-
-            File(output).listFiles()?.forEach { it.delete() }
-            File(outputCSV).listFiles()?.forEach { it.delete() }
 
             val inputFiles = file.listFiles()
             for (fileFromList in inputFiles!!) {
                 if (fileFromList.isDirectory || fileFromList.extension != "xml") {
                     continue
                 }
-                val sb = StringBuilder()
-                sb.append("FeatureName;Commonality;isOptional;ParentName;ParentCommonality;isParentAnd;isParentOr;isParentAlt;NumberOfConstraints\n")
-                try {
-                    println(fileFromList.nameWithoutExtension)
-
-                    val model = FeatureModelManager.load(Paths.get(fileFromList.path))
-
-                    val cnf = FeatureModelFormula(model).cnf
-
-                    val dimacsPath = "${outputCSV}/${fileFromList.nameWithoutExtension}.${DIMACSFormat().suffix}"
-
-                    Path.of(dimacsPath)
-
-                    saveFeatureModel(
-                        model,
-                        dimacsPath,
-                        DIMACSFormat(),
-                    )
-
-                    val rt = Runtime.getRuntime()
-
-                    var csvPath = "${outputCSV}/${fileFromList.nameWithoutExtension}"
-
-                    val p = rt.exec(arrayOf(".\\ddnnife\\bin\\ddnnife.exe", dimacsPath, "-c", csvPath))
-                    p.waitFor(30, TimeUnit.SECONDS)
-                    csvPath += "-features.csv"
-
-                    val br = BufferedReader(FileReader(csvPath))
-                    var line: String? = null
-                    val map = HashMap<Int, Float>()
-
-                    while ((br.readLine().also { line = it }) != null) {
-                        val str = line!!.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                        map.put(str[0].toInt(), str[2].toFloat())
-                    }
-
-                    val mapFiltered = map.filter { stringFloatEntry -> stringFloatEntry.value >= 0.4 && stringFloatEntry.value <= 0.6 }
-
-                    for (entry in mapFiltered){
-                        val featureName = cnf.variables.getName(entry.key)
-                        val commonality = entry.value
-                        val feature = model.getFeature(featureName)
-                        val featureStructure = feature.structure
-                        val isOptional = !featureStructure.isMandatory
-                        val parent = featureStructure.parent
-                        val parentName = parent.feature.name
-                        val parentCommonality = map[cnf.variables.getVariable(parentName)]
-                        val isParentAnd = parent.isAnd
-                        val isParentOr = parent.isOr
-                        val isParentAlt = parent.isAlternative
-                        val constraints = featureStructure.relevantConstraints.size
-                        sb.append("${featureName};${commonality};${isOptional};${parentName};${parentCommonality};${isParentAnd};${isParentOr};${isParentAlt};${constraints}\n")
-                    }
-                    val info = File("${output}/${fileFromList.nameWithoutExtension}_varianceDriver.csv")
-                    info.writeText(sb.toString())
-                } catch (e: NullPointerException) {
-                    println(e.stackTraceToString())
-                    println("FeatureModel: ${fileFromList.nameWithoutExtension}")
-                } catch (e: Exception) {
-                    println(e.stackTraceToString())
-                    println("FeatureModel: ${fileFromList.nameWithoutExtension}")
-                }
+                commonalityFromFile(fileFromList, output, outputCSV)
             }
-
-
         } else if (file.exists()) {
-
-            val sb = StringBuilder()
-            sb.append("FeatureName;Commonality;isOptional;Parent;ParentCommonality;isParentAnd;isParentOr;isParentAlt;NumberOfConstraints\n")
-
-            try {
-
-                val model = FeatureModelManager.load(Paths.get(file.path))
-
-                val cnf = FeatureModelFormula(model).cnf
-
-                val dimacsPath = "${outputCSV}/${file.nameWithoutExtension}.${DIMACSFormat().suffix}"
-
-                Path.of(dimacsPath)
-
-                saveFeatureModel(
-                    model,
-                    dimacsPath,
-                    DIMACSFormat(),
-                )
-
-                val rt = Runtime.getRuntime()
-
-                var csvPath = "${outputCSV}/${file.nameWithoutExtension}"
-
-                val p = rt.exec(arrayOf(".\\ddnnife\\bin\\ddnnife.exe", dimacsPath, "-c", csvPath))
-                p.waitFor(30, TimeUnit.SECONDS)
-                csvPath += "-features.csv"
-
-                val br = BufferedReader(FileReader(csvPath))
-                var line: String? = null
-                val map = HashMap<Int, Float>()
-
-                while ((br.readLine().also { line = it }) != null) {
-                    val str = line!!.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-                    map.put(str[0].toInt(), str[2].toFloat())
-                }
-
-                val mapFiltered = map.filter { stringFloatEntry -> stringFloatEntry.value >= 0.4 && stringFloatEntry.value <= 0.6 }
-
-                for (entry in mapFiltered){
-                    val featureName = cnf.variables.getName(entry.key)
-                    val commonality = entry.value
-                    val feature = model.getFeature(featureName)
-                    val featureStructure = feature.structure
-                    val isOptional = !featureStructure.isMandatory
-                    val parent = featureStructure.parent
-                    val parentName = parent.feature.name
-                    val parentCommonality = map[cnf.variables.getVariable(parentName)]
-                    val isParentAnd = parent.isAnd
-                    val isParentOr = parent.isOr
-                    val isParentAlt = parent.isAlternative
-                    val constraints = featureStructure.relevantConstraints.size
-                    sb.append("${featureName};${commonality};${isOptional};${parentName};${parentCommonality};${isParentAnd};${isParentOr};${isParentAlt};${constraints}\n")
-                }
-                val info = File("${output}/${file.nameWithoutExtension}_varianceDriver.csv")
-                info.writeText(sb.toString())
-
-            } catch (e: NullPointerException) {
-                println("Could not convert file, because file could not be converted to a feature model.")
-            } catch (e: Exception) {
-                println(e.stackTraceToString())
-            }
+            commonalityFromFile(file, output, outputCSV)
         }
 
     }
+
+    fun commonalityFromFile(file: File, output: String, outputCSV: String){
+
+        val sb = StringBuilder()
+        sb.append("FeatureName;Commonality;isOptional;Children;NumberOfConstraints;ParentName;ParentCommonality;isParentAnd;isParentOr;isParentAlt;ChildrenParent\n")
+        try {
+            println(file.nameWithoutExtension)
+
+            val model = FeatureModelManager.load(Paths.get(file.path))
+
+            val cnf = FeatureModelFormula(model).cnf
+
+            val dimacsPath = "${outputCSV}/${file.nameWithoutExtension}.${DIMACSFormat().suffix}"
+
+            Path.of(dimacsPath)
+
+            saveFeatureModel(
+                model,
+                dimacsPath,
+                DIMACSFormat(),
+            )
+
+            val rt = Runtime.getRuntime()
+
+            var csvPath = "${outputCSV}/${file.nameWithoutExtension}"
+
+            val p = rt.exec(arrayOf(".\\ddnnife\\bin\\ddnnife.exe", dimacsPath, "-c", csvPath))
+            p.waitFor(30, TimeUnit.SECONDS)
+            p.destroy()
+            csvPath += "-features.csv"
+
+            val br = BufferedReader(FileReader(csvPath))
+            var line: String? = null
+            val map = HashMap<Int, Float>()
+
+            while ((br.readLine().also { line = it }) != null) {
+                val str = line!!.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                map.put(str[0].toInt(), str[2].toFloat())
+            }
+
+            val mapFiltered = map.filter { stringFloatEntry -> stringFloatEntry.value >= 0.4 && stringFloatEntry.value <= 0.6 }
+
+            for (entry in mapFiltered){
+                val featureName = cnf.variables.getName(entry.key)
+                val commonality = entry.value
+                val feature = model.getFeature(featureName)
+                val featureStructure = feature.structure
+                val isOptional = !featureStructure.isMandatory
+                val childrenCount = featureStructure.children.size
+                val parent = featureStructure.parent
+                val parentName = parent.feature.name
+                val childrenCountParent = parent.children.size
+                val parentCommonality = map[cnf.variables.getVariable(parentName)]
+                val isParentAnd = parent.isAnd
+                val isParentOr = parent.isOr
+                val isParentAlt = parent.isAlternative
+                val constraints = featureStructure.relevantConstraints.size
+                sb.append("${featureName};${commonality};${isOptional};${childrenCount};${constraints};${parentName};${parentCommonality};${isParentAnd};${isParentOr};${isParentAlt};${childrenCountParent}\n")
+            }
+            val info = File("${output}/${file.nameWithoutExtension}_varianceDriver.csv")
+            info.writeText(sb.toString())
+        } catch (e: NullPointerException) {
+            println(e.stackTraceToString())
+            println("FeatureModel: ${file.nameWithoutExtension}")
+        } catch (e: Exception) {
+            println(e.stackTraceToString())
+            println("FeatureModel: ${file.nameWithoutExtension}")
+        }
+    }
+
 
     init {
         LibraryManager.registerLibrary(FMCoreLibrary.getInstance())
