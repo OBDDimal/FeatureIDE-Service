@@ -24,6 +24,7 @@ bin/
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
+!/ddnnife/**
 
 ### NetBeans ###
 /nbproject/private/
@@ -34,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+/dimacModels
+/files
