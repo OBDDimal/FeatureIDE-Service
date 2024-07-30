@@ -29,6 +29,7 @@ import java.io.IOException
 import java.lang.NullPointerException
 import java.math.BigInteger
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.MessageDigest
 import kotlin.system.exitProcess
@@ -271,8 +272,8 @@ object Converter {
         return ConvertOutput(arrayOf(file.name), file.typeOutput, arrayOf(file.content))
     }
 
-    private fun saveFeatureModel(model: IFeatureModel?, savePath: String, format: IPersistentFormat<IFeatureModel>?) {
-        FeatureModelManager.save(model, Paths.get(savePath), format)
+    public fun saveFeatureModel(model: IFeatureModel?, savePath: String, format: IPersistentFormat<IFeatureModel>?) {
+        FeatureModelManager.save(model, Path.of(savePath), format)
     }
 
     private fun getFormatType(file: File): Int? {
