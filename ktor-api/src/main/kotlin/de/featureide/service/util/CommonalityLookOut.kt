@@ -9,6 +9,7 @@ import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
 import kotlinx.cli.required
+import org.checkerframework.checker.index.qual.PolyLowerBound
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
@@ -30,6 +31,12 @@ object CommonalityLookOut {
         val path by parser.option(ArgType.String, shortName = "p", description = "Input path for file or directory.")
             .required()
 
+        val lowerBound by parser.option(ArgType.Double, shortName = "l", description = "Lower Commonality Bound.")
+
+        val upperBound by parser.option(ArgType.Double, shortName = "u", description = "Upper Commonality Bound.")
+
+        val parent by parser.option(ArgType.Boolean, shortName = "pa", description = "Use the parent method.")
+
         parser.parse(args)
         val file = File(path)
         val output = "./files/output"
@@ -46,15 +53,19 @@ object CommonalityLookOut {
                 if (fileFromList.isDirectory || fileFromList.extension != "xml") {
                     continue
                 }
-                commonalityFromFile(fileFromList, output, outputCSV)
+                commonalityFromFile(fileFromList, output, outputCSV, lowerBound, upperBound, parent)
             }
         } else if (file.exists()) {
-            commonalityFromFile(file, output, outputCSV)
+            commonalityFromFile(file, output, outputCSV, lowerBound, upperBound, parent)
         }
 
     }
 
-    fun commonalityFromFile(file: File, output: String, outputCSV: String){
+    fun commonalityFromFile(file: File, output: String, outputCSV: String, lowerBoundNull: Double?, upperBoundNull: Double?, parentNull: Boolean?) {
+
+        val lowerBound = lowerBoundNull ?: 0.4
+        val upperBound = upperBoundNull ?: 0.6
+        val parent = parentNull ?: false
 
         val sb = StringBuilder()
         sb.append("FeatureName;Commonality;isOptional;Children;NumberOfConstraints;ParentName;ParentCommonality;isParentAnd;isParentOr;isParentAlt;ChildrenParent\n")
@@ -93,7 +104,7 @@ object CommonalityLookOut {
                 map.put(str[0].toInt(), str[2].toFloat())
             }
 
-            val mapFiltered = map.filter { stringFloatEntry -> stringFloatEntry.value >= 0.4 && stringFloatEntry.value <= 0.6 }
+            val mapFiltered = map.filter { stringFloatEntry -> stringFloatEntry.value >= lowerBound && stringFloatEntry.value <= upperBound }
 
             for (entry in mapFiltered){
                 val featureName = cnf.variables.getName(entry.key)
