@@ -17,6 +17,8 @@ import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
+import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 import kotlin.math.pow
 
@@ -71,6 +73,8 @@ object CommonalityLookOut {
         parentNull: Boolean?
     ) {
 
+        val start = LocalDateTime.now()
+        var start2 = LocalDateTime.now()
 
         val parent = parentNull ?: false
 
@@ -98,6 +102,10 @@ object CommonalityLookOut {
                 )
 
                 val map = getCommonalitiesWithDDnnife(file, outputCSV, dimacsPath)
+
+                println(map.size)
+
+                start2 = LocalDateTime.now()
 
                 val mapFiltered =
                     map.filter { stringFloatEntry -> stringFloatEntry.value >= lowerBound && stringFloatEntry.value <= upperBound }
@@ -207,6 +215,8 @@ object CommonalityLookOut {
 
                 val map = getCommonalitiesWithDDnnife(file, outputCSV, dimacsPath)
 
+                start2 = LocalDateTime.now()
+
                 val mapFiltered =
                     map.filter { stringFloatEntry -> stringFloatEntry.value >= lowerBound && stringFloatEntry.value <= upperBound }
 
@@ -237,6 +247,20 @@ object CommonalityLookOut {
                 println("FeatureModel: ${file.nameWithoutExtension}")
             }
         }
+
+        println(
+            file.nameWithoutExtension + ": " + Duration.between(
+                start,
+                LocalDateTime.now()
+            ).toString()
+        )
+
+        println(
+            file.nameWithoutExtension + ": without ddnnife" + Duration.between(
+                start2,
+                LocalDateTime.now()
+            ).toString()
+        )
     }
 
     fun getCommonalitiesWithDDnnife(file: File, outputCSV: String, dimacsPath: String): Map<Int, Double> {
