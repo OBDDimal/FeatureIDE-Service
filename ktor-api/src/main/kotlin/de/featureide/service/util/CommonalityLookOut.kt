@@ -126,7 +126,7 @@ object CommonalityLookOut {
                 val mapFiltered =
                     map.filter { stringFloatEntry -> stringFloatEntry.value >= lowerBound && stringFloatEntry.value <= upperBound }
 
-                val parentChildAndMap = HashMap<ParentFeature, List<ChildFeature>>()
+                var parentChildAndMap = HashMap<ParentFeature, List<ChildFeature>>()
                 val parentChildAltMap = HashMap<ParentFeature, List<ChildFeature>>()
                 val parentChildOrMap = HashMap<ParentFeature, List<ChildFeature>>()
 
@@ -167,7 +167,8 @@ object CommonalityLookOut {
                             }
                             childFeatureList.add(childFeature)
                         }
-                        parentChildAndMap[parentFeature] = childFeatureList
+                        val sortedChildFeatureList = childFeatureList.sortedWith(compareBy<ChildFeature> { it.childrenSubtree }.thenBy { it.constraintSubtree })
+                        parentChildOrMap[parentFeature] = sortedChildFeatureList
                     } else if (isParentAlt) {
                         val childFeatureList = ArrayList<ChildFeature>()
                         for (featureStructure in parentFeatureStructure.children) {
@@ -187,7 +188,8 @@ object CommonalityLookOut {
                             }
                             childFeatureList.add(childFeature)
                         }
-                        parentChildAltMap[parentFeature] = childFeatureList
+                        val sortedChildFeatureList = childFeatureList.sortedWith(compareBy<ChildFeature> { it.childrenSubtree }.thenBy { it.constraintSubtree })
+                        parentChildOrMap[parentFeature] = sortedChildFeatureList
 
                     } else if (isParentOr) {
                         val childFeatureList = ArrayList<ChildFeature>()
@@ -208,9 +210,12 @@ object CommonalityLookOut {
                             }
                             childFeatureList.add(childFeature)
                         }
-                        parentChildOrMap[parentFeature] = childFeatureList
+                        val sortedChildFeatureList = childFeatureList.sortedWith(compareBy<ChildFeature> { it.childrenSubtree }.thenBy { it.constraintSubtree })
+                        parentChildOrMap[parentFeature] = sortedChildFeatureList
                     }
                 }
+                parentChildAndMap = parentChildAndMap.toSortedMap(compareBy { it.featureStructure.childrenCount }).toMap(HashMap())
+
                 for (entry in parentChildOrMap) {
                     for (entryChild in entry.value) {
                         sbOr.append("${entryChild.feature.name},${entryChild.commonality},${!entryChild.featureStructure.isMandatory},${entryChild.childrenSubtree},${entryChild.constraintSubtree},${entry.key.feature.name},${entry.key.commonality},${!entry.key.featureStructure.isMandatory},${entry.key.featureStructure.isAnd},${entry.key.featureStructure.isOr},${entry.key.featureStructure.isAlternative},${entry.key.featureStructure.children.size},${entry.key.featureStructure.relevantConstraints.size}\n")
