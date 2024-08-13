@@ -1,11 +1,16 @@
 package de.featureide.service.util
 
+import de.featureide.service.helpclasses.ChildFeature
+import de.featureide.service.helpclasses.ParentFeature
 import de.featureide.service.util.Converter.saveFeatureModel
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula
+import de.ovgu.featureide.fm.core.base.IFeatureStructure
+import de.ovgu.featureide.fm.core.base.impl.FeatureStructure
 import de.ovgu.featureide.fm.core.init.FMCoreLibrary
 import de.ovgu.featureide.fm.core.init.LibraryManager
 import de.ovgu.featureide.fm.core.io.dimacs.DIMACSFormat
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager
+import io.ktor.util.*
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
 import kotlinx.cli.required
@@ -19,7 +24,10 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
 import java.time.LocalDateTime
+import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 import kotlin.math.pow
 
 
@@ -37,6 +45,10 @@ object CommonalityLookOut {
         val lowerBound by parser.option(ArgType.Double, shortName = "l", description = "Lower Commonality Bound.")
 
         val upperBound by parser.option(ArgType.Double, shortName = "u", description = "Upper Commonality Bound.")
+
+        val maxChildren by parser.option(ArgType.Double, shortName = "ch", description = "Children Bound.")
+
+        val maxConstraints by parser.option(ArgType.Double, shortName = "co", description = "Constraints Bound.")
 
         val parent by parser.option(ArgType.Boolean, shortName = "pa", description = "Use the parent method.")
 
@@ -56,10 +68,10 @@ object CommonalityLookOut {
                 if (fileFromList.isDirectory || fileFromList.extension != "xml") {
                     continue
                 }
-                commonalityFromFile(fileFromList, output, outputCSV, lowerBound, upperBound, parent)
+                commonalityFromFile(fileFromList, output, outputCSV, lowerBound, upperBound, parent, maxChildren, maxConstraints)
             }
         } else if (file.exists()) {
-            commonalityFromFile(file, output, outputCSV, lowerBound, upperBound, parent)
+            commonalityFromFile(file, output, outputCSV, lowerBound, upperBound, parent, maxChildren, maxConstraints)
         }
 
     }
@@ -70,24 +82,28 @@ object CommonalityLookOut {
         outputCSV: String,
         lowerBoundNull: Double?,
         upperBoundNull: Double?,
-        parentNull: Boolean?
+        parentNull: Boolean?,
+        childrenMaxCountNull: Double?,
+        constraintMaxCountNull: Double?,
     ) {
 
         val start = LocalDateTime.now()
         var start2 = LocalDateTime.now()
 
         val parent = parentNull ?: false
+        val childrenMaxCount = childrenMaxCountNull ?: -1.0
+        val constraintMaxCount = constraintMaxCountNull ?: -1.0
+
 
         if (parent) {
             val lowerBound = lowerBoundNull ?: 0.9
             val upperBound = upperBoundNull ?: 1.0
-
-            val sb = StringBuilder()
-            sb.append("FeatureName;Commonality;isOptional;Children;NumberOfConstraints;ParentName;ParentCommonality;isParentAnd;isParentOr;isParentAlt;ChildrenParent;ParentConstraints\n")
             try {
                 println(file.nameWithoutExtension)
 
                 val model = FeatureModelManager.load(Paths.get(file.path))
+
+                model.constraints.size
 
                 val cnf = FeatureModelFormula(model).cnf
 
@@ -110,79 +126,114 @@ object CommonalityLookOut {
                 val mapFiltered =
                     map.filter { stringFloatEntry -> stringFloatEntry.value >= lowerBound && stringFloatEntry.value <= upperBound }
 
+                val parentChildAndMap = HashMap<ParentFeature, List<ChildFeature>>()
+                val parentChildAltMap = HashMap<ParentFeature, List<ChildFeature>>()
+                val parentChildOrMap = HashMap<ParentFeature, List<ChildFeature>>()
+
+                val sbAnd = StringBuilder()
+                sbAnd.append("FeatureName,Commonality,isOptional,Children,NumberOfConstraints,ParentName,ParentCommonality,ParentIsOptional,isParentAnd,isParentOr,isParentAlt,ChildrenParent,ParentConstraints\n")
+
+                val sbOr = StringBuilder()
+                sbOr.append("FeatureName,Commonality,isOptional,Children,NumberOfConstraints,ParentName,ParentCommonality,ParentIsOptional,isParentAnd,isParentOr,isParentAlt,ChildrenParent,ParentConstraints\n")
+
+                val sbAlt = StringBuilder()
+                sbAlt.append("FeatureName,Commonality,isOptional,Children,NumberOfConstraints,ParentName,ParentCommonality,ParentIsOptional,isParentAnd,isParentOr,isParentAlt,ChildrenParent,ParentConstraints\n")
+
                 for (entry in mapFiltered) {
                     val parentFeatureName = cnf.variables.getName(entry.key)
                     val parentCommonality = entry.value
-                    val parentFeature = model.getFeature(parentFeatureName)
-                    val parentFeatureStructure = parentFeature.structure
-                    val isParentOptional = !parentFeatureStructure.isMandatory
-                    val isParentAnd = parentFeatureStructure.isAnd
-                    val isParentOr = parentFeatureStructure.isOr
-                    val isParentAlt = parentFeatureStructure.isAlternative
-                    val parentConstraints = parentFeatureStructure.relevantConstraints.size
+                    val parentFeatureFromModel = model.getFeature(parentFeatureName)
+                    val parentFeatureStructure = parentFeatureFromModel.structure
+                    val parentFeature = ParentFeature(parentFeatureFromModel, parentCommonality, parentFeatureStructure)
+                    val isParentAnd = parentFeature.featureStructure.isAnd
+                    val isParentOr = parentFeature.featureStructure.isOr
+                    val isParentAlt = parentFeature.featureStructure.isAlternative
                     if (isParentAnd) {
+                        val childFeatureList = ArrayList<ChildFeature>()
                         for (featureStructure in parentFeatureStructure.children) {
-                            val featureName = featureStructure.feature.name
-                            val commonality = map[cnf.variables.getVariable(featureName)]
-                            val isOptional = !featureStructure.isMandatory
-                            val childrenCount = featureStructure.children.size
-                            val childrenCountParent = parentFeatureStructure.children.size
-                            val constraints = featureStructure.relevantConstraints.size
-                            if (commonality != parentCommonality / 2) {
+                            val feature = featureStructure.feature
+                            val commonality = map[cnf.variables.getVariable(feature.name)]
+                            val childFeature = ChildFeature(
+                                feature,
+                                commonality!!,
+                                featureStructure,
+                                getChildrenCountForSubTree(featureStructure),
+                                getRelevantConstraintsForSubTree(featureStructure)
+                            )
+                            if (childrenMaxCount > -1.0 && childFeature.childrenSubtree > childrenMaxCount) {
                                 continue
-                            } else if (childrenCount > 0) {
-                                continue
-                            } else if (constraints > 0) {
-                                continue
-                            } else if (!isOptional) {
+                            } else if (constraintMaxCount > -1.0 && childFeature.constraintSubtree > constraintMaxCount) {
                                 continue
                             }
-                            sb.append("${featureName};${commonality};${isOptional};${childrenCount};${constraints};${parentFeatureName};${parentCommonality};${isParentAnd};${isParentOr};${isParentAlt};${childrenCountParent};${parentConstraints}\n")
+                            childFeatureList.add(childFeature)
                         }
+                        parentChildAndMap[parentFeature] = childFeatureList
                     } else if (isParentAlt) {
+                        val childFeatureList = ArrayList<ChildFeature>()
                         for (featureStructure in parentFeatureStructure.children) {
-                            val featureName = featureStructure.feature.name
-                            val commonality = map[cnf.variables.getVariable(featureName)]
-                            val isOptional = !featureStructure.isMandatory
-                            val childrenCount = featureStructure.children.size
-                            val childrenCountParent = parentFeatureStructure.children.size
-                            val constraints = featureStructure.relevantConstraints.size
-                            if (commonality != parentCommonality / childrenCountParent) {
+                            val feature = featureStructure.feature
+                            val commonality = map[cnf.variables.getVariable(feature.name)]
+                            val childFeature = ChildFeature(
+                                feature,
+                                commonality!!,
+                                featureStructure,
+                                getChildrenCountForSubTree(featureStructure),
+                                getRelevantConstraintsForSubTree(featureStructure)
+                            )
+                            if (childrenMaxCount > -1.0 && childFeature.childrenSubtree > childrenMaxCount) {
                                 continue
-                            } else if (childrenCount > 0) {
-                                continue
-                            } else if (constraints > 0) {
-                                continue
-                            } else if (!isOptional) {
+                            } else if (constraintMaxCount > -1.0 && childFeature.constraintSubtree > constraintMaxCount) {
                                 continue
                             }
-                            sb.append("${featureName};${commonality};${isOptional};${childrenCount};${constraints};${parentFeatureName};${parentCommonality};${isParentAnd};${isParentOr};${isParentAlt};${childrenCountParent};${parentConstraints}\n")
+                            childFeatureList.add(childFeature)
                         }
+                        parentChildAltMap[parentFeature] = childFeatureList
 
                     } else if (isParentOr) {
+                        val childFeatureList = ArrayList<ChildFeature>()
                         for (featureStructure in parentFeatureStructure.children) {
-                            val featureName = featureStructure.feature.name
-                            val commonality = map[cnf.variables.getVariable(featureName)]
-                            val isOptional = !featureStructure.isMandatory
-                            val childrenCount = featureStructure.children.size
-                            val childrenCountParent = parentFeatureStructure.children.size
-                            val constraints = featureStructure.relevantConstraints.size
-                            val possibilities = 2.0.pow(childrenCountParent)
-                            if (commonality != (possibilities/2)/(possibilities-1)*parentCommonality) {
+                            val feature = featureStructure.feature
+                            val commonality = map[cnf.variables.getVariable(feature.name)]
+                            val childFeature = ChildFeature(
+                                feature,
+                                commonality!!,
+                                featureStructure,
+                                getChildrenCountForSubTree(featureStructure),
+                                getRelevantConstraintsForSubTree(featureStructure)
+                            )
+                            if (childrenMaxCount > -1.0 && childFeature.childrenSubtree > childrenMaxCount) {
                                 continue
-                            } else if (childrenCount > 0) {
-                                continue
-                            } else if (constraints > 0) {
-                                continue
-                            } else if (!isOptional) {
+                            } else if (constraintMaxCount > -1.0 && childFeature.constraintSubtree > constraintMaxCount) {
                                 continue
                             }
-                            sb.append("${featureName};${commonality};${isOptional};${childrenCount};${constraints};${parentFeatureName};${parentCommonality};${isParentAnd};${isParentOr};${isParentAlt};${childrenCountParent};${parentConstraints}\n")
+                            childFeatureList.add(childFeature)
                         }
+                        parentChildOrMap[parentFeature] = childFeatureList
                     }
                 }
-                val info = File("${output}/${file.nameWithoutExtension}_parentVarianceDriver.csv")
-                info.writeText(sb.toString())
+                for (entry in parentChildOrMap) {
+                    for (entryChild in entry.value) {
+                        sbOr.append("${entryChild.feature.name},${entryChild.commonality},${!entryChild.featureStructure.isMandatory},${entryChild.childrenSubtree},${entryChild.constraintSubtree},${entry.key.feature.name},${entry.key.commonality},${!entry.key.featureStructure.isMandatory},${entry.key.featureStructure.isAnd},${entry.key.featureStructure.isOr},${entry.key.featureStructure.isAlternative},${entry.key.featureStructure.children.size},${entry.key.featureStructure.relevantConstraints.size}\n")
+                    }
+                }
+                for (entry in parentChildAltMap) {
+                    for (entryChild in entry.value) {
+                        sbAlt.append("${entryChild.feature.name},${entryChild.commonality},${!entryChild.featureStructure.isMandatory},${entryChild.childrenSubtree},${entryChild.constraintSubtree},${entry.key.feature.name},${entry.key.commonality},${!entry.key.featureStructure.isMandatory},${entry.key.featureStructure.isAnd},${entry.key.featureStructure.isOr},${entry.key.featureStructure.isAlternative},${entry.key.featureStructure.children.size},${entry.key.featureStructure.relevantConstraints.size}\n")
+                    }
+                }
+                for (entry in parentChildAndMap) {
+                    for (entryChild in entry.value) {
+                        sbAnd.append("${entryChild.feature.name},${entryChild.commonality},${!entryChild.featureStructure.isMandatory},${entryChild.childrenSubtree},${entryChild.constraintSubtree},${entry.key.feature.name},${entry.key.commonality},${!entry.key.featureStructure.isMandatory},${entry.key.featureStructure.isAnd},${entry.key.featureStructure.isOr},${entry.key.featureStructure.isAlternative},${entry.key.featureStructure.children.size},${entry.key.featureStructure.relevantConstraints.size}\n")
+                    }
+                }
+
+
+                val infoAnd = File("${output}/${file.nameWithoutExtension}_parentVarianceDriverAnd.csv")
+                infoAnd.writeText(sbAnd.toString())
+                val infoAlt = File("${output}/${file.nameWithoutExtension}_parentVarianceDriverAlt.csv")
+                infoAlt.writeText(sbAlt.toString())
+                val infoOr = File("${output}/${file.nameWithoutExtension}_parentVarianceDriverOr.csv")
+                infoOr.writeText(sbOr.toString())
             } catch (e: NullPointerException) {
                 println(e.stackTraceToString())
                 println("FeatureModel: ${file.nameWithoutExtension}")
@@ -289,4 +340,30 @@ object CommonalityLookOut {
     init {
         LibraryManager.registerLibrary(FMCoreLibrary.getInstance())
     }
+
+    private fun getChildrenCountForSubTree(featureStructure: IFeatureStructure): Int {
+        if (featureStructure.children.size > 1) {
+            return featureStructure.children.size + featureStructure.children.map { child ->
+                getChildrenCountForSubTree(
+                    child
+                )
+            }.sum()
+        } else {
+            return 0;
+        }
+    }
+
+    private fun getRelevantConstraintsForSubTree(featureStructure: IFeatureStructure): Int {
+        if (featureStructure.children.size > 1) {
+            return featureStructure.relevantConstraints.size + featureStructure.children.map { child ->
+                getRelevantConstraintsForSubTree(
+                    child
+                )
+            }.sum()
+        } else {
+            return featureStructure.relevantConstraints.size;
+        }
+    }
+
+
 }
