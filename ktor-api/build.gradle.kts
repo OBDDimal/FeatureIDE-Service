@@ -1,4 +1,5 @@
 import de.undercouch.gradle.tasks.download.Download
+import org.gradle.jvm.tasks.Jar
 
 val ktor_version: String by project
 val kotlin_version: String by project
@@ -104,8 +105,25 @@ tasks.register<Download>("download_jar_dependencies") {
     }
 }
 
+
+val fatJar = task("fatJar", type = Jar::class) {
+    manifest {
+        attributes["Implementation-Title"] = "Gradle Jar File Example"
+        attributes["Implementation-Version"] = version
+        attributes["Main-Class"] = "de.featureide.service.Application"
+    }
+    from(configurations.runtimeClasspath.get().map({ if (it.isDirectory) it else zipTree(it) }))
+    with(tasks.jar.get() as CopySpec)
+}
+
 defaultTasks("download_jar_dependencies")
 
 tasks.compileKotlin {
     dependsOn("download_jar_dependencies")
+}
+
+tasks {
+	"build" {
+		dependsOn(fatJar)
+	}
 }
