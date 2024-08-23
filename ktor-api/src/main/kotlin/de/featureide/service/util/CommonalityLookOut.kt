@@ -25,9 +25,13 @@ import java.nio.file.Paths
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.TimeUnit
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
+import kotlin.math.abs
 import kotlin.math.pow
 
 
@@ -68,7 +72,16 @@ object CommonalityLookOut {
                 if (fileFromList.isDirectory || fileFromList.extension != "xml") {
                     continue
                 }
-                commonalityFromFile(fileFromList, output, outputCSV, lowerBound, upperBound, parent, maxChildren, maxConstraints)
+                commonalityFromFile(
+                    fileFromList,
+                    output,
+                    outputCSV,
+                    lowerBound,
+                    upperBound,
+                    parent,
+                    maxChildren,
+                    maxConstraints
+                )
             }
         } else if (file.exists()) {
             commonalityFromFile(file, output, outputCSV, lowerBound, upperBound, parent, maxChildren, maxConstraints)
@@ -126,9 +139,37 @@ object CommonalityLookOut {
                 val mapFiltered =
                     map.filter { stringFloatEntry -> stringFloatEntry.value >= lowerBound && stringFloatEntry.value <= upperBound }
 
-                var parentChildAndMap = HashMap<ParentFeature, List<ChildFeature>>()
-                val parentChildAltMap = HashMap<ParentFeature, List<ChildFeature>>()
-                val parentChildOrMap = HashMap<ParentFeature, List<ChildFeature>>()
+                val comparatorAnd = compareBy<Pair<ParentFeature, ChildFeature>> { !it.first.featureStructure.isMandatory }
+                    .thenBy {  it.second.featureStructure.isMandatory  }
+                    .thenByDescending { it.first.commonality }
+                    .thenBy { it.second.constraintSubtree }
+                    .thenBy { abs(0.5 - it.second.commonality) }
+                    .thenBy { it.second.childrenSubtree }
+                    .thenBy { it.first.featureStructure.relevantConstraints.size }
+                    .thenBy { it.first.featureStructure.childrenCount }
+                    .thenBy { it.first.feature.name }
+                val comparatorAlt = compareBy<Pair<ParentFeature, ChildFeature>> { !it.first.featureStructure.isMandatory }
+                    .thenBy {  it.second.featureStructure.isMandatory  }
+                    .thenByDescending { it.first.commonality }
+                    .thenBy { it.second.constraintSubtree }
+                    .thenBy { it.second.childrenSubtree }
+                    .thenBy { abs(0.5 - it.second.commonality) }
+                    .thenBy { it.first.featureStructure.relevantConstraints.size }
+                    .thenBy { it.first.featureStructure.childrenCount }
+                    .thenBy { it.first.feature.name }
+                val comparatorOr = compareBy<Pair<ParentFeature, ChildFeature>> { !it.first.featureStructure.isMandatory }
+                    .thenBy {  it.second.featureStructure.isMandatory  }
+                    .thenByDescending { it.first.commonality }
+                    .thenBy { it.second.constraintSubtree }
+                    .thenBy { it.second.childrenSubtree }
+                    .thenBy { abs(2/3 - it.second.commonality) }
+                    .thenBy { it.first.featureStructure.relevantConstraints.size }
+                    .thenBy { it.first.featureStructure.childrenCount }
+                    .thenBy { it.first.feature.name }
+
+                var parentChildAndSortedSet = Collections.synchronizedList(mutableListOf<Pair<ParentFeature, ChildFeature>>())
+                var parentChildAltSortedSet = Collections.synchronizedList(mutableListOf<Pair<ParentFeature, ChildFeature>>())
+                var parentChildOrSortedSet = Collections.synchronizedList(mutableListOf<Pair<ParentFeature, ChildFeature>>())
 
                 val sbAnd = StringBuilder()
                 sbAnd.append("FeatureName,Commonality,isOptional,Children,NumberOfConstraints,ParentName,ParentCommonality,ParentIsOptional,isParentAnd,isParentOr,isParentAlt,ChildrenParent,ParentConstraints\n")
@@ -139,9 +180,10 @@ object CommonalityLookOut {
                 val sbAlt = StringBuilder()
                 sbAlt.append("FeatureName,Commonality,isOptional,Children,NumberOfConstraints,ParentName,ParentCommonality,ParentIsOptional,isParentAnd,isParentOr,isParentAlt,ChildrenParent,ParentConstraints\n")
 
-                for (entry in mapFiltered) {
-                    val parentFeatureName = cnf.variables.getName(entry.key)
-                    val parentCommonality = entry.value
+                val start3 = LocalDateTime.now()
+                mapFiltered.toList().parallelStream().forEach {
+                    val parentFeatureName = cnf.variables.getName(it.first)
+                    val parentCommonality = it.second
                     val parentFeatureFromModel = model.getFeature(parentFeatureName)
                     val parentFeatureStructure = parentFeatureFromModel.structure
                     val parentFeature = ParentFeature(parentFeatureFromModel, parentCommonality, parentFeatureStructure)
@@ -149,7 +191,6 @@ object CommonalityLookOut {
                     val isParentOr = parentFeature.featureStructure.isOr
                     val isParentAlt = parentFeature.featureStructure.isAlternative
                     if (isParentAnd) {
-                        val childFeatureList = ArrayList<ChildFeature>()
                         for (featureStructure in parentFeatureStructure.children) {
                             val feature = featureStructure.feature
                             val commonality = map[cnf.variables.getVariable(feature.name)]
@@ -165,12 +206,9 @@ object CommonalityLookOut {
                             } else if (constraintMaxCount > -1.0 && childFeature.constraintSubtree > constraintMaxCount) {
                                 continue
                             }
-                            childFeatureList.add(childFeature)
+                            parentChildAndSortedSet.add(Pair(parentFeature, childFeature))
                         }
-                        val sortedChildFeatureList = childFeatureList.sortedWith(compareBy<ChildFeature> { it.childrenSubtree }.thenBy { it.constraintSubtree })
-                        parentChildOrMap[parentFeature] = sortedChildFeatureList
                     } else if (isParentAlt) {
-                        val childFeatureList = ArrayList<ChildFeature>()
                         for (featureStructure in parentFeatureStructure.children) {
                             val feature = featureStructure.feature
                             val commonality = map[cnf.variables.getVariable(feature.name)]
@@ -186,13 +224,9 @@ object CommonalityLookOut {
                             } else if (constraintMaxCount > -1.0 && childFeature.constraintSubtree > constraintMaxCount) {
                                 continue
                             }
-                            childFeatureList.add(childFeature)
+                            parentChildAltSortedSet.add(Pair(parentFeature, childFeature))
                         }
-                        val sortedChildFeatureList = childFeatureList.sortedWith(compareBy<ChildFeature> { it.childrenSubtree }.thenBy { it.constraintSubtree })
-                        parentChildOrMap[parentFeature] = sortedChildFeatureList
-
                     } else if (isParentOr) {
-                        val childFeatureList = ArrayList<ChildFeature>()
                         for (featureStructure in parentFeatureStructure.children) {
                             val feature = featureStructure.feature
                             val commonality = map[cnf.variables.getVariable(feature.name)]
@@ -208,28 +242,40 @@ object CommonalityLookOut {
                             } else if (constraintMaxCount > -1.0 && childFeature.constraintSubtree > constraintMaxCount) {
                                 continue
                             }
-                            childFeatureList.add(childFeature)
+                            parentChildOrSortedSet.add(Pair(parentFeature, childFeature))
                         }
-                        val sortedChildFeatureList = childFeatureList.sortedWith(compareBy<ChildFeature> { it.childrenSubtree }.thenBy { it.constraintSubtree })
-                        parentChildOrMap[parentFeature] = sortedChildFeatureList
                     }
                 }
-                parentChildAndMap = parentChildAndMap.toSortedMap(compareBy { it.featureStructure.childrenCount }).toMap(HashMap())
 
-                for (entry in parentChildOrMap) {
-                    for (entryChild in entry.value) {
-                        sbOr.append("${entryChild.feature.name},${entryChild.commonality},${!entryChild.featureStructure.isMandatory},${entryChild.childrenSubtree},${entryChild.constraintSubtree},${entry.key.feature.name},${entry.key.commonality},${!entry.key.featureStructure.isMandatory},${entry.key.featureStructure.isAnd},${entry.key.featureStructure.isOr},${entry.key.featureStructure.isAlternative},${entry.key.featureStructure.children.size},${entry.key.featureStructure.relevantConstraints.size}\n")
-                    }
+                println(
+                    file.nameWithoutExtension + ": inital features " + Duration.between(
+                        start3,
+                        LocalDateTime.now()
+                    ).toString()
+                )
+
+                val start4 = LocalDateTime.now()
+
+                parentChildAndSortedSet = parentChildAndSortedSet.parallelStream().sorted(comparatorAnd).toList()
+                parentChildAltSortedSet = parentChildAltSortedSet.parallelStream().sorted(comparatorAlt).toList()
+                parentChildOrSortedSet = parentChildOrSortedSet.parallelStream().sorted(comparatorOr).toList()
+
+                println(
+                    file.nameWithoutExtension + ": inital features " + Duration.between(
+                        start4,
+                        LocalDateTime.now()
+                    ).toString()
+                )
+
+
+                for (entry in parentChildAndSortedSet) {
+                    sbAnd.append("${entry.second.feature.name},${entry.second.commonality},${!entry.second.featureStructure.isMandatory},${entry.second.childrenSubtree},${entry.second.constraintSubtree},${entry.first.feature.name},${entry.first.commonality},${!entry.first.featureStructure.isMandatory},${entry.first.featureStructure.isAnd},${entry.first.featureStructure.isOr},${entry.first.featureStructure.isAlternative},${entry.first.featureStructure.children.size},${entry.first.featureStructure.relevantConstraints.size}\n")
                 }
-                for (entry in parentChildAltMap) {
-                    for (entryChild in entry.value) {
-                        sbAlt.append("${entryChild.feature.name},${entryChild.commonality},${!entryChild.featureStructure.isMandatory},${entryChild.childrenSubtree},${entryChild.constraintSubtree},${entry.key.feature.name},${entry.key.commonality},${!entry.key.featureStructure.isMandatory},${entry.key.featureStructure.isAnd},${entry.key.featureStructure.isOr},${entry.key.featureStructure.isAlternative},${entry.key.featureStructure.children.size},${entry.key.featureStructure.relevantConstraints.size}\n")
-                    }
+                for (entry in parentChildAltSortedSet) {
+                    sbAlt.append("${entry.second.feature.name},${entry.second.commonality},${!entry.second.featureStructure.isMandatory},${entry.second.childrenSubtree},${entry.second.constraintSubtree},${entry.first.feature.name},${entry.first.commonality},${!entry.first.featureStructure.isMandatory},${entry.first.featureStructure.isAnd},${entry.first.featureStructure.isOr},${entry.first.featureStructure.isAlternative},${entry.first.featureStructure.children.size},${entry.first.featureStructure.relevantConstraints.size}\n")
                 }
-                for (entry in parentChildAndMap) {
-                    for (entryChild in entry.value) {
-                        sbAnd.append("${entryChild.feature.name},${entryChild.commonality},${!entryChild.featureStructure.isMandatory},${entryChild.childrenSubtree},${entryChild.constraintSubtree},${entry.key.feature.name},${entry.key.commonality},${!entry.key.featureStructure.isMandatory},${entry.key.featureStructure.isAnd},${entry.key.featureStructure.isOr},${entry.key.featureStructure.isAlternative},${entry.key.featureStructure.children.size},${entry.key.featureStructure.relevantConstraints.size}\n")
-                    }
+                for (entry in parentChildOrSortedSet) {
+                    sbOr.append("${entry.second.feature.name},${entry.second.commonality},${!entry.second.featureStructure.isMandatory},${entry.second.childrenSubtree},${entry.second.constraintSubtree},${entry.first.feature.name},${entry.first.commonality},${!entry.first.featureStructure.isMandatory},${entry.first.featureStructure.isAnd},${entry.first.featureStructure.isOr},${entry.first.featureStructure.isAlternative},${entry.first.featureStructure.children.size},${entry.first.featureStructure.relevantConstraints.size}\n")
                 }
 
 
@@ -347,26 +393,26 @@ object CommonalityLookOut {
     }
 
     private fun getChildrenCountForSubTree(featureStructure: IFeatureStructure): Int {
-        if (featureStructure.children.size > 1) {
+        if (featureStructure.children.size > 0) {
             return featureStructure.children.size + featureStructure.children.map { child ->
                 getChildrenCountForSubTree(
                     child
                 )
             }.sum()
         } else {
-            return 0;
+            return 0
         }
     }
 
     private fun getRelevantConstraintsForSubTree(featureStructure: IFeatureStructure): Int {
-        if (featureStructure.children.size > 1) {
+        if (featureStructure.children.size > 0) {
             return featureStructure.relevantConstraints.size + featureStructure.children.map { child ->
                 getRelevantConstraintsForSubTree(
                     child
                 )
             }.sum()
         } else {
-            return featureStructure.relevantConstraints.size;
+            return featureStructure.relevantConstraints.size
         }
     }
 
