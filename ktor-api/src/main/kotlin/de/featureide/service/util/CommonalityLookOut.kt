@@ -139,37 +139,44 @@ object CommonalityLookOut {
                 val mapFiltered =
                     map.filter { stringFloatEntry -> stringFloatEntry.value >= lowerBound && stringFloatEntry.value <= upperBound }
 
-                val comparatorAnd = compareBy<Pair<ParentFeature, ChildFeature>> { !it.first.featureStructure.isMandatory }
-                    .thenBy {  it.second.featureStructure.isMandatory  }
-                    .thenByDescending { it.first.commonality }
-                    .thenBy { it.second.constraintSubtree }
-                    .thenBy { abs(0.5 - it.second.commonality) }
-                    .thenBy { it.second.childrenSubtree }
-                    .thenBy { it.first.featureStructure.relevantConstraints.size }
-                    .thenBy { it.first.featureStructure.childrenCount }
-                    .thenBy { it.first.feature.name }
-                val comparatorAlt = compareBy<Pair<ParentFeature, ChildFeature>> { !it.first.featureStructure.isMandatory }
-                    .thenBy {  it.second.featureStructure.isMandatory  }
-                    .thenByDescending { it.first.commonality }
-                    .thenBy { it.second.constraintSubtree }
-                    .thenBy { it.second.childrenSubtree }
-                    .thenBy { abs(0.5 - it.second.commonality) }
-                    .thenBy { it.first.featureStructure.relevantConstraints.size }
-                    .thenBy { it.first.featureStructure.childrenCount }
-                    .thenBy { it.first.feature.name }
-                val comparatorOr = compareBy<Pair<ParentFeature, ChildFeature>> { !it.first.featureStructure.isMandatory }
-                    .thenBy {  it.second.featureStructure.isMandatory  }
-                    .thenByDescending { it.first.commonality }
-                    .thenBy { it.second.constraintSubtree }
-                    .thenBy { it.second.childrenSubtree }
-                    .thenBy { abs(2/3 - it.second.commonality) }
-                    .thenBy { it.first.featureStructure.relevantConstraints.size }
-                    .thenBy { it.first.featureStructure.childrenCount }
-                    .thenBy { it.first.feature.name }
 
-                var parentChildAndSortedSet = Collections.synchronizedList(mutableListOf<Pair<ParentFeature, ChildFeature>>())
-                var parentChildAltSortedSet = Collections.synchronizedList(mutableListOf<Pair<ParentFeature, ChildFeature>>())
-                var parentChildOrSortedSet = Collections.synchronizedList(mutableListOf<Pair<ParentFeature, ChildFeature>>())
+
+                val comparatorAnd =
+                    compareBy<Pair<ParentFeature, ChildFeature>> { it.second.featureStructure.isMandatory }
+                        .thenBy { it.second.constraintSubtree }
+                        .thenBy { it.second.childrenSubtree }
+                        .thenByDescending { it.first.commonality }
+                        .thenBy { abs(0.5 - it.second.commonality) }
+                        .thenBy { !it.first.featureStructure.isMandatory }
+                        .thenBy { it.first.featureStructure.relevantConstraints.size }
+                        .thenBy { it.first.featureStructure.childrenCount }
+                        .thenBy { it.first.feature.name }
+                val comparatorAlt =
+                    compareBy<Pair<ParentFeature, ChildFeature>> { it.second.featureStructure.isMandatory }
+                        .thenBy { it.second.constraintSubtree }
+                        .thenBy { it.second.childrenSubtree }
+                        .thenByDescending { it.first.commonality }
+                        .thenBy { abs(0.5 - it.second.commonality) }
+                        .thenBy { it.first.featureStructure.relevantConstraints.size }
+                        .thenBy { it.first.featureStructure.childrenCount }
+                        .thenBy { it.first.feature.name }
+                val comparatorOr =
+                    compareBy<Pair<ParentFeature, ChildFeature>> { it.second.featureStructure.isMandatory }
+                        .thenBy { it.second.constraintSubtree }
+                        .thenBy { it.second.childrenSubtree }
+                        .thenByDescending { it.first.commonality }
+                        .thenBy { abs(2 / 3 - it.second.commonality) }
+                        .thenBy { !it.first.featureStructure.isMandatory }
+                        .thenBy { it.first.featureStructure.relevantConstraints.size }
+                        .thenBy { it.first.featureStructure.childrenCount }
+                        .thenBy { it.first.feature.name }
+
+                var parentChildAndSortedSet =
+                    Collections.synchronizedList(mutableListOf<Pair<ParentFeature, ChildFeature>>())
+                var parentChildAltSortedSet =
+                    Collections.synchronizedList(mutableListOf<Pair<ParentFeature, ChildFeature>>())
+                var parentChildOrSortedSet =
+                    Collections.synchronizedList(mutableListOf<Pair<ParentFeature, ChildFeature>>())
 
                 val sbAnd = StringBuilder()
                 sbAnd.append("FeatureName,Commonality,isOptional,Children,NumberOfConstraints,ParentName,ParentCommonality,ParentIsOptional,isParentAnd,isParentOr,isParentAlt,ChildrenParent,ParentConstraints\n")
