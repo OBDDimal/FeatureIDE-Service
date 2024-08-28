@@ -157,6 +157,7 @@ object CommonalityLookOut {
                         .thenBy { it.second.childrenSubtree }
                         .thenByDescending { it.first.commonality }
                         .thenBy { abs(0.5 - it.second.commonality) }
+                        .thenBy { !it.first.featureStructure.isMandatory }
                         .thenBy { it.first.featureStructure.relevantConstraints.size }
                         .thenBy { it.first.featureStructure.childrenCount }
                         .thenBy { it.first.feature.name }
