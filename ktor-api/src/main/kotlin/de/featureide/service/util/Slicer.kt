@@ -144,7 +144,7 @@ object Slicer {
         val featureNamesToKeep: Set<String> = featuresToKeep.stream().map { obj: IFeature -> obj.name }.collect(
             Collectors.toSet()
         )
-        val sliceJob = SliceFeatureModel(featureModel, featureNamesToKeep, false)
+        val sliceJob = SliceFeatureModel(featureModel, featureNamesToKeep, true)
         return LongRunningWrapper.runMethod(sliceJob)
     }
 }

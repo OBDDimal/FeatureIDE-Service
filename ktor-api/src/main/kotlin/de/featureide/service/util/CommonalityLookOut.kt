@@ -212,6 +212,9 @@ object CommonalityLookOut {
                         for (featureStructure in parentFeatureStructure.children) {
                             val feature = featureStructure.feature
                             val commonality = map[cnf.variables.getVariable(feature.name)]
+                            if (commonality == parentCommonality){
+                                continue
+                            }
                             val childFeature = ChildFeature(
                                 feature,
                                 commonality!!,
@@ -237,6 +240,9 @@ object CommonalityLookOut {
                         for (featureStructure in parentFeatureStructure.children) {
                             val feature = featureStructure.feature
                             val commonality = map[cnf.variables.getVariable(feature.name)]
+                            if (commonality == parentCommonality){
+                                continue
+                            }
                             val childFeature = ChildFeature(
                                 feature,
                                 commonality!!,
@@ -262,6 +268,9 @@ object CommonalityLookOut {
                         for (featureStructure in parentFeatureStructure.children) {
                             val feature = featureStructure.feature
                             val commonality = map[cnf.variables.getVariable(feature.name)]
+                            if (commonality == parentCommonality){
+                                continue
+                            }
                             val childFeature = ChildFeature(
                                 feature,
                                 commonality!!,
