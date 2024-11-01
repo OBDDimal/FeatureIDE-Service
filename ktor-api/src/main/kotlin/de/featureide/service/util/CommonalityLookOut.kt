@@ -442,6 +442,7 @@ object CommonalityLookOut {
             map.put(str[0].toInt(), str[2].toDouble())
         }
 
+        br.close()
         return map
     }
 

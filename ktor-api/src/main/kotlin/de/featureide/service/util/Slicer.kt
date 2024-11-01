@@ -133,7 +133,7 @@ object Slicer {
      * @param selection The selection of features to get the implied features
      * @return IFeatureModel Returns the new featuremodel without the selected features
      */
-    private fun slice(featureModel: IFeatureModel, selection: Array<String>): IFeatureModel? {
+    fun slice(featureModel: IFeatureModel, selection: Array<String>): IFeatureModel? {
         val featuresToSlice = ArrayList<IFeature>()
 
         for (name in selection) {
