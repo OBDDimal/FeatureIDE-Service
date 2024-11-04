@@ -80,7 +80,7 @@ object EvalFeatureChanger {
 
                 var statTriple = getDeadCoreFeatures(model)
 
-                println("Before Mandatory")
+                println("Before Slicing")
 
                 println("Features: " + model.features.size)
                 println("DeadFeatures: " + statTriple.first.size)
@@ -104,7 +104,7 @@ object EvalFeatureChanger {
 
                 println("Configurations: " + configurations)
                 var digits = configurations.length
-                var firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 6)
+                var firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 20)
                 println(firstFour + "E" + (digits - 1))
 
                 val featuresToLook = features?.split(",")
@@ -118,7 +118,7 @@ object EvalFeatureChanger {
 
                 model = slice(model, featuresToSliceArray)
 
-                println("After Mandatory")
+                println("After Slicing")
 
                 statTriple = getDeadCoreFeatures(model)
 
@@ -143,7 +143,7 @@ object EvalFeatureChanger {
                 println("Configurations: " + configurations)
 
                 digits = configurations.length
-                firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 6)
+                firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 20)
                 println(firstFour + "E" + (digits - 1))
 
             } else if (mandatory == true) {
@@ -178,7 +178,7 @@ object EvalFeatureChanger {
 
                     println("Configurations: " + configurations)
                     var digits = configurations.length
-                    var firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 6)
+                    var firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 20)
                     println(firstFour + "E" + (digits - 1))
 
                     val featuresToLook = features?.split(",")
@@ -215,7 +215,7 @@ object EvalFeatureChanger {
                     println("Configurations: " + configurations)
 
                     digits = configurations.length
-                    firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 6)
+                    firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 20)
                     println(firstFour + "E" + (digits - 1))
 
                 } else if (relationShip == "or") {
@@ -248,7 +248,7 @@ object EvalFeatureChanger {
 
                     println("Configurations: " + configurations)
                     var digits = configurations.length
-                    var firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 6)
+                    var firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 20)
                     println(firstFour + "E" + (digits - 1))
 
                     val featuresToLook = features?.split(",")
@@ -288,7 +288,7 @@ object EvalFeatureChanger {
                     println("Configurations: " + configurations)
 
                     digits = configurations.length
-                    firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 6)
+                    firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 20)
                     println(firstFour + "E" + (digits - 1))
 
                 } else if (relationShip == "alt") {
@@ -321,7 +321,7 @@ object EvalFeatureChanger {
 
                     println("Configurations: " + configurations)
                     var digits = configurations.length
-                    var firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 6)
+                    var firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 20)
                     println(firstFour + "E" + (digits - 1))
 
                     val featuresToLook = features?.split(",")
@@ -358,7 +358,7 @@ object EvalFeatureChanger {
                     println("Configurations: " + configurations)
 
                     digits = configurations.length
-                    firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 6)
+                    firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 20)
                     println(firstFour + "E" + (digits - 1))
 
                 }
@@ -369,7 +369,7 @@ object EvalFeatureChanger {
 
                 var statTriple = getDeadCoreFeatures(model)
 
-                println("Before Slicing")
+                println("Before Constraint")
 
                 println("Features: " + model.features.size)
                 println("DeadFeatures: " + statTriple.first.size)
@@ -393,7 +393,7 @@ object EvalFeatureChanger {
 
                 println("Configurations: " + configurations)
                 var digits = configurations.length
-                var firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 6)
+                var firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 20)
                 println(firstFour + "E" + (digits - 1))
 
                 val featuresToLook = features?.split(",")
@@ -432,7 +432,7 @@ object EvalFeatureChanger {
                 println("Configurations: " + configurations)
 
                 digits = configurations.length
-                firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 6)
+                firstFour = configurations.substring(0, 1) + "." + configurations.substring(1, 20)
                 println(firstFour + "E" + (digits - 1))
 
             }
