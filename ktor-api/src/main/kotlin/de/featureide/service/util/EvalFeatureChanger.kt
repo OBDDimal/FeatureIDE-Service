@@ -67,8 +67,8 @@ object EvalFeatureChanger {
         val outputCSV = "./files/outputCSVEval"
         Files.createDirectories(Path.of(output))
         Files.createDirectories(Path.of(outputCSV))
-        File(output).listFiles()?.forEach { it.delete() }
-        File(outputCSV).listFiles()?.forEach { it.delete() }
+        File(output).listFiles()?.forEach{ it.delete() }
+        File(outputCSV).listFiles()?.forEach{ it.delete() }
 
         if (file.isDirectory()) {
 

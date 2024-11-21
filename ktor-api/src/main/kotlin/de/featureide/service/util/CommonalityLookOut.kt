@@ -3,6 +3,7 @@ package de.featureide.service.util
 import de.featureide.service.helpclasses.ChildFeature
 import de.featureide.service.helpclasses.ParentFeature
 import de.featureide.service.util.Converter.saveFeatureModel
+import de.featureide.service.util.Slicer.slice
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula
 import de.ovgu.featureide.fm.core.base.IFeatureStructure
 import de.ovgu.featureide.fm.core.base.impl.FeatureStructure
@@ -58,6 +59,8 @@ object CommonalityLookOut {
 
         val parent by parser.option(ArgType.Boolean, shortName = "pa", description = "Use the parent method.")
 
+        val slice by parser.option(ArgType.Boolean, shortName = "s", description = "Slice the top 3 features immediately.")
+
         parser.parse(args)
         val file = File(path)
         val output = "./files/output"
@@ -83,11 +86,12 @@ object CommonalityLookOut {
                     parent,
                     maxChildren,
                     maxConstraints,
-                    threshold
+                    threshold,
+                    slice
                 )
             }
         } else if (file.exists()) {
-            commonalityFromFile(file, output, outputCSV, lowerBound, upperBound, parent, maxChildren, maxConstraints, threshold)
+            commonalityFromFile(file, output, outputCSV, lowerBound, upperBound, parent, maxChildren, maxConstraints, threshold, slice)
         }
 
     }
@@ -101,13 +105,15 @@ object CommonalityLookOut {
         parentNull: Boolean?,
         childrenMaxCountNull: Double?,
         constraintMaxCountNull: Double?,
-        thresholdNull: Double?
+        thresholdNull: Double?,
+        sliceNull: Boolean?
     ) {
 
         val start = LocalDateTime.now()
         var start2 = LocalDateTime.now()
 
         val parent = parentNull ?: false
+        val slice = sliceNull ?: false
         val childrenMaxCount = childrenMaxCountNull ?: -1.0
         val constraintMaxCount = constraintMaxCountNull ?: -1.0
         val threshold = thresholdNull ?: 0.0
@@ -201,7 +207,6 @@ object CommonalityLookOut {
                 val sbAlt = StringBuilder()
                 sbAlt.append("FeatureName,Commonality,isOptional,Level,Children,NumberOfConstraints,ChildrenOfGroup,ConstraintsOfGroup,ParentName,ParentCommonality,ParentIsOptional,isParentAnd,isParentOr,isParentAlt,ChildrenParent,ParentConstraints\n")
 
-                val start3 = LocalDateTime.now()
                 mapFiltered.toList().parallelStream().forEach {
                     val parentFeatureName = cnf.variables.getName(it.first)
                     val parentCommonality = it.second
@@ -268,8 +273,6 @@ object CommonalityLookOut {
                             } else if (constraintMaxCount != -1.0 && constraintMaxCount < 1.0 && childFeature.constraintSubtree > (constraintMaxCount*allConstraints)) {
                                 continue
                             }
-                            parentFeature.childrenConstraints += childFeature.constraintSubtree
-                            parentFeature.childrenChildren += childFeature.childrenSubtree
                             parentChildAltSortedSet.add(Pair(parentFeature, childFeature))
                         }
                     } else if (isParentOr) {
@@ -305,44 +308,43 @@ object CommonalityLookOut {
                     }
                 }
 
-                println(
-                    file.nameWithoutExtension + ": inital features " + Duration.between(
-                        start3,
-                        LocalDateTime.now()
-                    ).toString()
-                )
-
-                val start4 = LocalDateTime.now()
 
                 parentChildAndSortedSet = parentChildAndSortedSet.parallelStream().sorted(comparatorAnd).toList()
                 parentChildAltSortedSet = parentChildAltSortedSet.parallelStream().sorted(comparatorAlt).toList()
                 parentChildOrSortedSet = parentChildOrSortedSet.parallelStream().sorted(comparatorOr).toList()
 
-                println(
-                    file.nameWithoutExtension + ": inital features " + Duration.between(
-                        start4,
-                        LocalDateTime.now()
-                    ).toString()
-                )
 
 
-                for (entry in parentChildAndSortedSet) {
-                    sbAnd.append("${entry.second.feature.name},${entry.second.commonality},${!entry.second.featureStructure.isMandatory},${entry.second.level},${entry.second.childrenSubtree},${entry.second.constraintSubtree},-,-,${entry.first.feature.name},${entry.first.commonality},${!entry.first.featureStructure.isMandatory},${entry.first.featureStructure.isAnd},${entry.first.featureStructure.isOr},${entry.first.featureStructure.isAlternative},${entry.first.featureStructure.children.size},${entry.first.featureStructure.relevantConstraints.size}\n")
+                if (slice){
+                    val featuresToSliceArray = arrayOf(parentChildAndSortedSet[0].second.feature.name, parentChildAndSortedSet[1].second.feature.name, parentChildAndSortedSet[2].second.feature.name)
+
+                    val start3 = LocalDateTime.now()
+                    slice(model, featuresToSliceArray)
+                    println(
+                        file.nameWithoutExtension + ": slicing" + Duration.between(
+                            start3,
+                            LocalDateTime.now()
+                        ).toString()
+                    )
+                } else {
+                    for (entry in parentChildAndSortedSet) {
+                        sbAnd.append("${entry.second.feature.name},${entry.second.commonality},${!entry.second.featureStructure.isMandatory},${entry.second.level},${entry.second.childrenSubtree},${entry.second.constraintSubtree},-,-,${entry.first.feature.name},${entry.first.commonality},${!entry.first.featureStructure.isMandatory},${entry.first.featureStructure.isAnd},${entry.first.featureStructure.isOr},${entry.first.featureStructure.isAlternative},${entry.first.featureStructure.children.size},${entry.first.featureStructure.relevantConstraints.size}\n")
+                    }
+                    for (entry in parentChildAltSortedSet) {
+                        sbAlt.append("${entry.second.feature.name},${entry.second.commonality},${!entry.second.featureStructure.isMandatory},${entry.second.level},${entry.second.childrenSubtree},${entry.second.constraintSubtree},${entry.first.childrenChildren},${entry.first.childrenConstraints},${entry.first.feature.name},${entry.first.commonality},${!entry.first.featureStructure.isMandatory},${entry.first.featureStructure.isAnd},${entry.first.featureStructure.isOr},${entry.first.featureStructure.isAlternative},${entry.first.featureStructure.children.size},${entry.first.featureStructure.relevantConstraints.size}\n")
+                    }
+                    for (entry in parentChildOrSortedSet) {
+                        sbOr.append("${entry.second.feature.name},${entry.second.commonality},${!entry.second.featureStructure.isMandatory},${entry.second.level},${entry.second.childrenSubtree},${entry.second.constraintSubtree},${entry.first.childrenChildren},${entry.first.childrenConstraints},${entry.first.feature.name},${entry.first.commonality},${!entry.first.featureStructure.isMandatory},${entry.first.featureStructure.isAnd},${entry.first.featureStructure.isOr},${entry.first.featureStructure.isAlternative},${entry.first.featureStructure.children.size},${entry.first.featureStructure.relevantConstraints.size}\n")
+                    }
+
+
+                    val infoAnd = File("${output}/${file.nameWithoutExtension}_parentVarianceDriverAnd.csv")
+                    infoAnd.writeText(sbAnd.toString())
+                    val infoAlt = File("${output}/${file.nameWithoutExtension}_parentVarianceDriverAlt.csv")
+                    infoAlt.writeText(sbAlt.toString())
+                    val infoOr = File("${output}/${file.nameWithoutExtension}_parentVarianceDriverOr.csv")
+                    infoOr.writeText(sbOr.toString())
                 }
-                for (entry in parentChildAltSortedSet) {
-                    sbAlt.append("${entry.second.feature.name},${entry.second.commonality},${!entry.second.featureStructure.isMandatory},${entry.second.level},${entry.second.childrenSubtree},${entry.second.constraintSubtree},${entry.first.childrenChildren},${entry.first.childrenConstraints},${entry.first.feature.name},${entry.first.commonality},${!entry.first.featureStructure.isMandatory},${entry.first.featureStructure.isAnd},${entry.first.featureStructure.isOr},${entry.first.featureStructure.isAlternative},${entry.first.featureStructure.children.size},${entry.first.featureStructure.relevantConstraints.size}\n")
-                }
-                for (entry in parentChildOrSortedSet) {
-                    sbOr.append("${entry.second.feature.name},${entry.second.commonality},${!entry.second.featureStructure.isMandatory},${entry.second.level},${entry.second.childrenSubtree},${entry.second.constraintSubtree},${entry.first.childrenChildren},${entry.first.childrenConstraints},${entry.first.feature.name},${entry.first.commonality},${!entry.first.featureStructure.isMandatory},${entry.first.featureStructure.isAnd},${entry.first.featureStructure.isOr},${entry.first.featureStructure.isAlternative},${entry.first.featureStructure.children.size},${entry.first.featureStructure.relevantConstraints.size}\n")
-                }
-
-
-                val infoAnd = File("${output}/${file.nameWithoutExtension}_parentVarianceDriverAnd.csv")
-                infoAnd.writeText(sbAnd.toString())
-                val infoAlt = File("${output}/${file.nameWithoutExtension}_parentVarianceDriverAlt.csv")
-                infoAlt.writeText(sbAlt.toString())
-                val infoOr = File("${output}/${file.nameWithoutExtension}_parentVarianceDriverOr.csv")
-                infoOr.writeText(sbOr.toString())
             } catch (e: NullPointerException) {
                 println(e.stackTraceToString())
                 println("FeatureModel: ${file.nameWithoutExtension}")
@@ -421,6 +423,7 @@ object CommonalityLookOut {
                 LocalDateTime.now()
             ).toString()
         )
+
     }
 
     fun getCommonalitiesWithDDnnife(file: File, outputCSV: String, dimacsPath: String): Map<Int, Double> {
